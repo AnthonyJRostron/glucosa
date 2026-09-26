@@ -9468,12 +9468,26 @@ function shiftSampleDatasetToToday(data) {
         }
     }
 
+    // NEW: shift blood pressure records (bpRecords) the same number of days,
+    // so they stay aligned with the shifted glucose records. Without this,
+    // bpRecords kept their original (old) dates while records were shifted
+    // to end today, and later versions of applySampleDataset() didn't even
+    // load bpRecords at all - see fix below.
+    if (Array.isArray(data.bpRecords)) {
+        for (const br of data.bpRecords) {
+            if (br.date) br.date = shiftDateStr(br.date, shiftDays);
+            if (typeof br.createdAt === 'string' && br.createdAt.length >= 10) {
+                br.createdAt = shiftDateStr(br.createdAt.slice(0, 10), shiftDays) + br.createdAt.slice(10);
+            }
+        }
+    }
+
     return data;
 }
 
             // Aplica un dataset completo (formato {patients, currentPatientId, records,
-            // weatherDataCache}) sustituyendo el estado actual. Se usa al cargar los
-            // datos de ejemplo (diabetes.json).
+            // bpRecords, weatherDataCache}) sustituyendo el estado actual. Se usa al
+            // cargar los datos de ejemplo (diabetes.json).
             function applySampleDataset(data) {
                 if (!data || !Array.isArray(data.patients) || data.patients.length === 0) {
                     toast('El archivo de datos de ejemplo no tiene el formato esperado.', 'error');
@@ -9504,6 +9518,16 @@ function shiftSampleDatasetToToday(data) {
                         const sevs = [sevBefore, sevAfter, sevNight].filter(s => s !== null);
                         if (sevs.length > 0) r.severity = sevOrder.find(s => sevs.includes(s)) || 'mild';
                     }
+                }
+                // NEW: bpRecords (presion arterial) nunca se copiaba a state aqui,
+                // asi que las lecturas de presion del dataset de ejemplo se perdian
+                // silenciosamente aunque el archivo diabetes.json las trajera y
+                // los pacientes tuvieran bpEnabled=true.
+                state.bpRecords = Array.isArray(data.bpRecords) ? data.bpRecords : [];
+                for (const br of state.bpRecords) {
+                    if (!br.patientId) br.patientId = state.currentPatientId;
+                    if (!br.time) br.time = '08:00';
+                    if (br.pulse !== undefined && br.pulse !== null) br.pulse = numericValue(br.pulse);
                 }
                 state.weatherDataCache = data.weatherDataCache || {};
                 return true;
