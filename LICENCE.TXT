@@ -1,0 +1,139 @@
+📄 LICENCIA DE USO DE SOFTWARE MÉDICO PROPIETARIO
+Versión para clínicas, centros de salud y hospitales  
+Aplicación: Sistema de registro y seguimiento de glucosa
+
+1. Definiciones
+Licenciante: El desarrollador y propietario del software.
+Licenciatario: Clínica, centro de salud, hospital o entidad médica que adquiere la licencia.
+Pacientes: Usuarios finales que emplean la aplicación para registrar y gestionar sus datos de glucosa.
+Software: La aplicación web de registro de glucosa, incluyendo su código, interfaz, funcionalidades y materiales asociados.
+Datos del paciente: Información introducida por el paciente en su dispositivo, incluyendo archivos JSON generados por la aplicación.
+
+2. Concesión de licencia
+El Licenciante concede al Licenciatario una licencia no exclusiva, no transferible y de ámbito interno para utilizar el Software en su actividad médica.
+
+La licencia incluye:
+
+Uso ilimitado por parte del personal del Licenciatario.
+
+Uso gratuito por parte de los pacientes del Licenciatario.
+
+Página de aterrizaje personalizada con la información de contacto del Licenciatario.
+
+Información de contacto del Licenciatario integrada en la parte superior de la aplicación.
+
+Dirección de correo electrónico por defecto para recepción de datos, modificable por el paciente.
+
+Actualizaciones del Software durante el periodo de licencia.
+
+3. Precio y condiciones comerciales
+3.1 Tarifas anuales
+Clínicas y centros de salud: 150 € / año
+
+Hospitales: 300–500 € / año (según tamaño y departamentos)
+
+3.2 Cuota de configuración (única)
+Incluye creación de la página de aterrizaje y configuración de contacto:
+30 € (único pago)
+
+3.3 Integración de logotipo (opcional)
+Añadir el logotipo del Licenciatario a la página de aterrizaje:
+20 € (único pago)
+
+3.4 Soporte premium (opcional)
+Atención prioritaria y modificaciones personalizadas:
+200 € / año
+
+4. Uso gratuito por parte de los pacientes
+Los pacientes pueden utilizar el Software sin coste, siempre bajo la instancia del Licenciatario.
+
+El paciente puede:
+
+Modificar la dirección de correo electrónico a la que enviará sus datos.
+
+Modificar el contenido del mensaje antes de enviarlo.
+
+Decidir si adjunta o no su archivo JSON.
+
+Guardar copias de seguridad en su dispositivo.
+
+Copiar sus datos a un pendrive u otro medio físico y entregarlo manualmente al proveedor de salud.
+
+El Software no transmite datos automáticamente.
+
+5. Control del paciente sobre sus datos
+El Software está diseñado para garantizar que el paciente controla completamente la transmisión de sus datos:
+
+El archivo JSON se genera y descarga localmente.
+
+El Software no adjunta automáticamente el archivo a ningún correo.
+
+El paciente debe decidir voluntariamente si adjunta el archivo.
+
+El paciente puede modificar el destinatario del correo.
+
+El paciente puede modificar el contenido del mensaje.
+
+El paciente puede optar por entregar sus datos en persona mediante un pendrive u otro medio físico.
+
+El Licenciante no procesa, almacena ni transmite datos médicos.
+
+6. Responsabilidad del Licenciatario (GDPR / RGPD)
+El Licenciatario es responsable de:
+
+Cumplir con el Reglamento General de Protección de Datos (RGPD).
+
+Gestionar adecuadamente los datos que los pacientes decidan enviar.
+
+Informar a los pacientes sobre el uso de sus datos.
+
+Mantener la seguridad de los datos recibidos.
+
+El Licenciante queda exento de cualquier responsabilidad relacionada con:
+
+Datos enviados voluntariamente por los pacientes.
+
+Errores en la gestión de datos por parte del Licenciatario.
+
+Incumplimientos normativos del Licenciatario.
+
+7. Restricciones
+El Licenciatario no puede:
+
+Copiar, modificar o redistribuir el Software.
+
+Crear versiones derivadas.
+
+Publicar o alojar el Software fuera del entorno autorizado.
+
+Intentar obtener acceso al código fuente o ingeniería inversa.
+
+8. Propiedad intelectual
+El Software es propiedad exclusiva del Licenciante.
+Todos los derechos no concedidos explícitamente quedan reservados.
+
+9. Limitación de responsabilidad
+El Software se proporciona “tal cual”, sin garantía de resultados clínicos.
+El Licenciante no será responsable de:
+
+Daños derivados del uso del Software.
+
+Errores cometidos por pacientes o personal médico.
+
+Pérdida de datos causada por el Licenciatario o por los pacientes.
+
+10. Duración y renovación
+La licencia tiene una duración de 12 meses desde la fecha de compra.
+Puede renovarse anualmente mediante el pago de la tarifa correspondiente.
+
+11. Terminación
+El Licenciante puede revocar la licencia si el Licenciatario:
+
+Incumple las condiciones de uso.
+
+Redistribuye o modifica el Software sin permiso.
+
+Utiliza el Software de forma contraria a la normativa médica o legal.
+
+12. Jurisdicción
+Este acuerdo se rige por la legislación española y europea aplicable.
