@@ -8,99 +8,7 @@
             document.documentElement.classList.add('dark-theme');
         }
     </script>
-    <script>
-
-        (function () {
-            'use strict';
-            const PROTECTION = window.PROTECTION = {
-                enabled: true,
-                blockDevtoolsShortcuts: true,
-                detectDevtools: true,      // deteccion por diferencia de tamano de ventana
-                devtoolsThreshold: 200     // px; alto para evitar falsos positivos
-            };
-
-            const isEditable = (t) => !!(t && t.closest &&
-                t.closest('input, textarea, select, [contenteditable="true"]'));
-            const stop = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
-
-            // Estilos: sin seleccion de texto salvo en campos de formulario
-            const st = document.createElement('style');
-            st.textContent =
-                'html.protected body{-webkit-user-select:none;-moz-user-select:none;user-select:none;' +
-                '-webkit-touch-callout:none;}' +
-                'html.protected input,html.protected textarea,html.protected select,' +
-                'html.protected [contenteditable="true"]{-webkit-user-select:text;-moz-user-select:text;user-select:text;}' +
-                'html.protected img,html.protected canvas{-webkit-user-drag:none;user-drag:none;}' +
-                '#devtoolsShield{position:fixed;inset:0;z-index:2147483647;background:#0b3b5c;color:#fff;' +
-                'display:none;align-items:center;justify-content:center;text-align:center;padding:24px;' +
-                'font:600 1rem Arial,sans-serif;}' +
-                '#devtoolsShield.on{display:flex;}';
-            document.head.appendChild(st);
-            document.documentElement.classList.add('protected');
-
-            // Clic derecho / menu contextual
-            document.addEventListener('contextmenu', (e) => {
-                if (!PROTECTION.enabled) return;
-                if (isEditable(e.target)) return;
-                return stop(e);
-            }, true);
-
-            // Copiar, cortar, seleccionar, arrastrar (fuera de campos de formulario)
-            ['copy', 'cut', 'selectstart', 'dragstart'].forEach((ev) => {
-                document.addEventListener(ev, (e) => {
-                    if (!PROTECTION.enabled) return;
-                    if (isEditable(e.target)) return;
-                    return stop(e);
-                }, true);
-            });
-
-            // Atajos de teclado
-            window.addEventListener('keydown', (e) => {
-                if (!PROTECTION.enabled) return;
-                const k = (e.key || '').toLowerCase();
-                const ctrl = e.ctrlKey || e.metaKey;
-                let block = false;
-
-                if (PROTECTION.blockDevtoolsShortcuts) {
-                    if (e.key === 'F12') block = true;
-                    // Ctrl/Cmd+Shift+I, J, C, K (herramientas de desarrollo, consola, inspector)
-                    if (ctrl && e.shiftKey && ['i', 'j', 'c', 'k'].includes(k)) block = true;
-                    // Cmd+Option+I / J / C / U (macOS)
-                    if (e.metaKey && e.altKey && ['i', 'j', 'c', 'u'].includes(k)) block = true;
-                    // Ver codigo fuente
-                    if (ctrl && k === 'u') block = true;
-                }
-                // Guardar pagina
-                if (ctrl && k === 's') block = true;
-                // Seleccionar todo / copiar / cortar fuera de campos de formulario
-                if (ctrl && ['a', 'c', 'x'].includes(k) && !isEditable(e.target)) block = true;
-
-                if (block) stop(e);
-            }, true);
-
-            // Deteccion de herramientas de desarrollo abiertas (dock lateral o inferior).
-            // Umbral alto para no molestar a usuarios con zoom, barras laterales, etc.
-            const shield = document.createElement('div');
-            shield.id = 'devtoolsShield';
-            shield.textContent = 'Cierra las herramientas de desarrollo para continuar.';
-            const attachShield = () => { if (!shield.parentNode) document.body.appendChild(shield); };
-            if (document.body) attachShield(); else document.addEventListener('DOMContentLoaded', attachShield);
-
-            let lastOpen = false;
-            setInterval(() => {
-                if (!PROTECTION.enabled || !PROTECTION.detectDevtools) {
-                    shield.classList.remove('on'); return;
-                }
-                const wGap = window.outerWidth - window.innerWidth;
-                const hGap = window.outerHeight - window.innerHeight;
-                const open = wGap > PROTECTION.devtoolsThreshold || hGap > PROTECTION.devtoolsThreshold;
-                if (open !== lastOpen) {
-                    lastOpen = open;
-                    shield.classList.toggle('on', open);
-                }
-            }, 1000);
-        })();
-    </script>
+         
     <script>
         (function loadChartJS() {
             const cdnUrl = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
@@ -3832,6 +3740,12 @@
                     130-139/85-89, hipertension 140-179/90-109, hipertension severa &gt;=180/110. Estos umbrales
                     diagnosticos no varian por edad ni por sexo; la edad y el sexo solo influyen en los objetivos
                     clinicos de tratamiento, no en esta clasificacion.</p>
+                <!-- Comentario en lenguaje natural, igual que "Resumen para el paciente" en la
+                     seccion de glucosa (ver generateBpSummary()). -->
+                <div id="bpSummaryBox" style="background:#f8fafd;border-radius:12px;padding:14px 18px;margin:12px 0;border-left:4px solid #2a7a9c;">
+                    <h4 style="color:#0b3b5c;margin:0 0 6px 0;font-size:0.95rem;">Resumen de la presion arterial</h4>
+                    <div id="bpSummaryText" style="font-size:0.9rem;color:#1e293b;">Cargando datos...</div>
+                </div>
             </div>
 
             <!-- Weather Insights -->
@@ -4059,24 +3973,42 @@
                     <p>
                         <strong>Ninguno de estos pacientes es real.</strong> Son 5 casos ficticios, cada uno con
                         <strong>365 dias de registros</strong> (mediciones de glucosa, animo, ejercicio, contexto
-                        dietetico...), pensados para que el <strong>personal clinico se familiarice</strong> con la
-                        aplicacion (tabla de registros, graficos, panel de adherencia, comparaciones estadisticas,
-                        informes en PDF) antes de usarla con un paciente real.
+                        dietetico, medicacion y, en dos casos, presion arterial), pensados para que el
+                        <strong>personal clinico se familiarice</strong> con la aplicacion (tabla de registros,
+                        graficos, panel de adherencia, comparaciones estadisticas, informes en PDF/Excel) antes de
+                        usarla con un paciente real.
                     </p>
                     <ul style="margin:0 0 12px;padding-left:20px;">
-                        <li><strong>Carlos Alberto Fernandez Lopez</strong> — adherencia muy baja al plan (caso principal, el mas indicado para empezar).</li>
-                        <li><strong>Ana Maria Torres Gil</strong> — fenomeno del alba, con buena adherencia general.</li>
-                        <li><strong>Javier Manuel Ortega Diaz</strong> — control razonablemente bueno, con desviaciones ocasionales de todo tipo.</li>
-                        <li><strong>Laura Isabel Mendez Ruiz</strong> — historial de hipoglucemias que llevo a reducir su dosis de insulina.</li>
-                        <li><strong>Pablo Andres Molina Vega</strong> — variabilidad glucemica ligada al ejercicio.</li>
+                        <li><strong>Carlos Alberto Fernandez Lopez</strong> — adherencia muy baja al plan (caso
+                            principal, el mas indicado para empezar). Ademas de insulina, toma Enalapril y
+                            Amlodipino para una <strong>hipertension arterial</strong> y Atorvastatina; olvida dosis
+                            con frecuencia (~33%) y, como consecuencia, su presion arterial se mantiene mal
+                            controlada pese al tratamiento.</li>
+                        <li><strong>Ana Maria Torres Gil</strong> — fenomeno del alba, con buena adherencia general.
+                            Ademas de insulina toma Eutirox (hipotiroidismo) y, tras varios meses con presion
+                            normal-alta, se le diagnostica <strong>hipertension</strong> y comienza tratamiento con
+                            Losartan a mitad del periodo, con buena respuesta (la presion baja de forma progresiva
+                            tras el inicio).</li>
+                        <li><strong>Javier Manuel Ortega Diaz</strong> — control razonablemente bueno, con
+                            desviaciones ocasionales de todo tipo. Ademas de insulina toma una estatina
+                            (Atorvastatina) para prevencion cardiovascular; presion arterial normal.</li>
+                        <li><strong>Laura Isabel Mendez Ruiz</strong> — historial de hipoglucemias que llevo a
+                            reducir su dosis de insulina. Tambien toma un anticonceptivo oral combinado; presion
+                            arterial normal.</li>
+                        <li><strong>Pablo Andres Molina Vega</strong> — variabilidad glucemica ligada al ejercicio.
+                            Toma ibuprofeno de forma ocasional para molestias musculares; presion arterial normal,
+                            con pulso en reposo bajo propio de una persona activa.</li>
                     </ul>
                     <p>
                         Los valores se generaron de forma simulada: las comidas atipicas (familiares, restaurante,
                         comida rapida, eventos, exceso de cantidad) elevan la glucosa posterior, y el alcohol o
                         saltarse una comida reducen la previa o la nocturna — para poder mostrar contrastes claros en
-                        el panel de adherencia y en comparaciones como Kruskal-Wallis. <strong>No representan una
-                        relacion causa-efecto medica exacta caso por caso</strong>, es un conjunto con fines
-                        demostrativos.
+                        el panel de adherencia y en comparaciones como Kruskal-Wallis. Los casos de Carlos y Ana
+                        permiten ademas practicar con los informes y graficos de <strong>presion arterial</strong>
+                        (estadisticas, categorias ESC/ESH y comentario automatico), incluyendo un ejemplo de mal
+                        control por falta de adherencia (Carlos) y otro de buen control tras iniciar tratamiento
+                        (Ana). <strong>No representan una relacion causa-efecto medica exacta caso por caso</strong>,
+                        es un conjunto con fines demostrativos.
                     </p>
                     <p>
                         Las fechas se ajustaran automaticamente al cargarlas, de modo que el ultimo dia del historial
@@ -4089,7 +4021,10 @@
                 </div>
                 <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
                     <button class="btn btn-outline btn-sm" id="backToNoPatientChoiceBtn" type="button">Atras</button>
-                    <button class="btn btn-primary btn-sm" id="loadSampleDataBtn" type="button">Si, cargar los 5 pacientes de ejemplo</button>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-outline btn-sm" id="copySampleDataInfoBtn" type="button">Copiar informacion</button>
+                        <button class="btn btn-primary btn-sm" id="loadSampleDataBtn" type="button">Si, cargar los 5 pacientes de ejemplo</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4627,6 +4562,7 @@
             const showSampleDataInfoBtn = $('showSampleDataInfoBtn');
             const backToNoPatientChoiceBtn = $('backToNoPatientChoiceBtn');
             const loadSampleDataBtn = $('loadSampleDataBtn');
+            const copySampleDataInfoBtn = $('copySampleDataInfoBtn');
             const addNewPatientFromPromptBtn = $('addNewPatientFromPromptBtn');
             const toastContainer = $('toastContainer');
             const filterStart = $('filterStart');
@@ -6257,10 +6193,102 @@ function addMedicationLog(medId, omitida) {
                         min: s[0], max: s[s.length - 1],
                         median: s[Math.floor((s.length - 1) / 2)],
                         avg: s.reduce((a, b) => a + b, 0) / s.length,
-                        n: s.length
+                        n: s.length,
+                        // Metricas adicionales (mismo criterio que las estadisticas de
+                        // glucosa: safeStddev/safeCv/safeIQR/safePercentile), para que los
+                        // informes y exportaciones puedan mostrar la presion arterial con
+                        // el mismo nivel de detalle que la glucosa.
+                        std: safeStddev(arr),
+                        cv: safeCv(arr),
+                        iqr: safeIQR(arr),
+                        p25: safePercentile(arr, 25),
+                        p75: safePercentile(arr, 75)
                     };
                 }
                 return { sys: q(sys), dia: q(dia), pulse: q(pulse), n: records.length };
+            }
+
+            // Genera un comentario en lenguaje natural sobre la presion arterial,
+            // equivalente a generateSummary() para la glucosa: se usa tanto en pantalla
+            // (resumen dentro del panel de presion) como en las exportaciones (PDF clinico,
+            // informe para el paciente y hoja de Excel).
+            function generateBpSummary(bpRecords) {
+                if (!bpRecords || !bpRecords.length) {
+                    return 'No hay lecturas de presion arterial en el periodo seleccionado.';
+                }
+                const parts = [];
+                const days = countDistinctDays(bpRecords);
+                const descSuff = sufficiencyDescriptive(bpRecords.length, days);
+                parts.push(
+                    `Has registrado ${bpRecords.length} lectura(s) de presion arterial en ${days} dia(s) distinto(s) dentro del periodo seleccionado (suficiencia de los datos: ${descSuff.status.toLowerCase()}).`
+                );
+                if (descSuff.status === 'Insuficiente') {
+                    parts.push('Con tan pocos datos, cualquier descripcion es solo orientativa; anade mas lecturas para una vision mas fiable.');
+                }
+
+                const sysVals = bpRecords.map(r => r.systolic).filter(v => v != null);
+                const diaVals = bpRecords.map(r => r.diastolic).filter(v => v != null);
+                const t = getBpThresholds();
+                const avgSys = safeAvg(sysVals);
+                const avgDia = safeAvg(diaVals);
+                const catOrder = ['optimal', 'normal', 'high', 'hypertension', 'hypertension-severe'];
+                if (avgSys !== null && avgDia !== null) {
+                    const catSys = getBpCategory(avgSys, t.sys);
+                    const catDia = getBpCategory(avgDia, t.dia);
+                    const worseCat = catOrder[Math.max(catOrder.indexOf(catSys), catOrder.indexOf(catDia))];
+                    let catDesc = '';
+                    if (worseCat === 'optimal') catDesc = 'tu presion arterial media esta en un nivel optimo.';
+                    else if (worseCat === 'normal') catDesc = 'tu presion arterial media es normal.';
+                    else if (worseCat === 'high') catDesc = 'tu presion arterial media es normal-alta; conviene vigilarla.';
+                    else if (worseCat === 'hypertension') catDesc = 'tu presion arterial media esta en rango de hipertension; comentalo con tu medico.';
+                    else catDesc = 'tu presion arterial media esta muy elevada (hipertension severa); consulta cuanto antes con tu equipo sanitario.';
+                    parts.push(`Tu media es de ${avgSys.toFixed(0)}/${avgDia.toFixed(0)} mmHg, ${catDesc}`);
+                }
+
+                const cvSys = safeCv(sysVals);
+                if (cvSys !== null) {
+                    let cvDesc = '';
+                    if (cvSys < 10) cvDesc = 'tus lecturas son muy estables.';
+                    else if (cvSys < 15) cvDesc = 'tus lecturas tienen una variabilidad moderada.';
+                    else cvDesc = 'tus lecturas varian bastante de un dia a otro; puede reflejar factores como el estres, la sal o la adherencia a la medicacion.';
+                    parts.push(`La variabilidad de la sistolica (CV) es del ${cvSys.toFixed(1)}%, ${cvDesc}`);
+                }
+
+                const highCount = bpRecords.filter(r => {
+                    const cs = getBpCategory(r.systolic, t.sys);
+                    const cd = getBpCategory(r.diastolic, t.dia);
+                    return cs === 'hypertension' || cs === 'hypertension-severe' ||
+                        cd === 'hypertension' || cd === 'hypertension-severe';
+                }).length;
+                const pctHigh = (highCount / bpRecords.length) * 100;
+                if (pctHigh > 0) {
+                    const desc = pctHigh >= 50 ? 'lo que indica un control poco adecuado; comentalo con tu medico.' :
+                        pctHigh >= 20 ? 'conviene seguir vigilandolo.' :
+                        'algo puntual, sin ser la tonica general.';
+                    parts.push(`El ${pctHigh.toFixed(0)}% de tus lecturas estan en rango de hipertension (>=140/90 mmHg), ${desc}`);
+                } else {
+                    parts.push('Ninguna de tus lecturas esta en rango de hipertension. Buen control!');
+                }
+
+                // Comparacion primera mitad vs segunda mitad del periodo: util para ver el
+                // efecto de un cambio de tratamiento o de habitos (p.ej. inicio de un
+                // antihipertensivo) sin necesitar que el usuario defina el corte a mano.
+                const sorted = [...bpRecords].sort((a, b) => bpRecordTimestamp(a) < bpRecordTimestamp(b) ? -1 : 1);
+                if (sorted.length >= 6) {
+                    const half = Math.floor(sorted.length / 2);
+                    const avgSys1 = safeAvg(sorted.slice(0, half).map(r => r.systolic).filter(v => v != null));
+                    const avgSys2 = safeAvg(sorted.slice(half).map(r => r.systolic).filter(v => v != null));
+                    if (avgSys1 !== null && avgSys2 !== null && Math.abs(avgSys2 - avgSys1) >= 5) {
+                        if (avgSys2 < avgSys1) {
+                            parts.push(`En la segunda mitad del periodo tu sistolica media bajo de ${avgSys1.toFixed(0)} a ${avgSys2.toFixed(0)} mmHg, una mejoria que puede reflejar el efecto de cambios en el tratamiento o el estilo de vida.`);
+                        } else {
+                            parts.push(`En la segunda mitad del periodo tu sistolica media subio de ${avgSys1.toFixed(0)} a ${avgSys2.toFixed(0)} mmHg; comentalo con tu equipo sanitario.`);
+                        }
+                    }
+                }
+
+                parts.push('Recuerda que estos datos son una herramienta de apoyo. La interpretacion definitiva debe hacerla tu medico.');
+                return parts.join(' ');
             }
 
             // Renderiza el panel de analisis de presion (dentro del modal de graficos
@@ -6277,7 +6305,9 @@ function addMedicationLog(medId, omitida) {
                 if (state.filterStart) records = records.filter(r => r.date >= state.filterStart);
                 if (state.filterEnd) records = records.filter(r => r.date <= state.filterEnd);
                 const statsBox = document.getElementById('bpStatsGrid');
+                const bpSummaryEl = document.getElementById('bpSummaryText');
                 const stats = computeBpStats(records);
+                if (bpSummaryEl) bpSummaryEl.textContent = generateBpSummary(records);
                 if (!stats) {
                     if (statsBox) statsBox.innerHTML = '<p style="font-size:.85rem;color:#6a8aa5;">No hay lecturas de presion en el rango seleccionado.</p>';
                 } else if (statsBox) {
@@ -6285,8 +6315,10 @@ function addMedicationLog(medId, omitida) {
                     statsBox.innerHTML = `
                         <div class="bp-stat-card"><div class="bp-stat-value">${last.systolic}/${last.diastolic}</div><div class="bp-stat-label">Ultima lectura (mmHg)</div></div>
                         <div class="bp-stat-card"><div class="bp-stat-value">${stats.sys.avg.toFixed(0)}/${stats.dia.avg.toFixed(0)}</div><div class="bp-stat-label">Media (mmHg)</div></div>
+                        <div class="bp-stat-card"><div class="bp-stat-value">${stats.sys.median}/${stats.dia.median}</div><div class="bp-stat-label">Mediana (mmHg)</div></div>
                         <div class="bp-stat-card"><div class="bp-stat-value">${stats.sys.min}-${stats.sys.max}</div><div class="bp-stat-label">Rango sistolica</div></div>
                         <div class="bp-stat-card"><div class="bp-stat-value">${stats.dia.min}-${stats.dia.max}</div><div class="bp-stat-label">Rango diastolica</div></div>
+                        <div class="bp-stat-card"><div class="bp-stat-value">${stats.sys.cv !== null ? stats.sys.cv.toFixed(1) + '%' : '--'}</div><div class="bp-stat-label">Variabilidad sistolica (CV)</div></div>
                         <div class="bp-stat-card"><div class="bp-stat-value">${stats.n}</div><div class="bp-stat-label">Lecturas en el periodo</div></div>
                     `;
                 }
@@ -9548,6 +9580,66 @@ function shiftSampleDatasetToToday(data) {
                 renderBpRecords();
             }
 
+            // Texto plano (sin HTML) con la misma informacion que se muestra en el paso
+            // "Datos de ejemplo" del asistente inicial, para poder copiarlo al
+            // portapapeles (p.ej. para pegarlo en una nota o un correo).
+            function getSampleDataDescriptionText() {
+                return [
+                    'Datos de ejemplo: 5 pacientes ficticios',
+                    '',
+                    'Ninguno de estos pacientes es real. Son 5 casos ficticios, cada uno con 365 dias de ' +
+                    'registros (mediciones de glucosa, animo, ejercicio, contexto dietetico, medicacion y, en ' +
+                    'dos casos, presion arterial), pensados para que el personal clinico se familiarice con la ' +
+                    'aplicacion (tabla de registros, graficos, panel de adherencia, comparaciones estadisticas, ' +
+                    'informes en PDF/Excel) antes de usarla con un paciente real.',
+                    '',
+                    '- Carlos Alberto Fernandez Lopez: adherencia muy baja al plan (caso principal, el mas ' +
+                    'indicado para empezar). Ademas de insulina, toma Enalapril y Amlodipino para una ' +
+                    'hipertension arterial y Atorvastatina; olvida dosis con frecuencia (~33%) y, como ' +
+                    'consecuencia, su presion arterial se mantiene mal controlada pese al tratamiento.',
+                    '- Ana Maria Torres Gil: fenomeno del alba, con buena adherencia general. Ademas de ' +
+                    'insulina toma Eutirox (hipotiroidismo) y, tras varios meses con presion normal-alta, se le ' +
+                    'diagnostica hipertension y comienza tratamiento con Losartan a mitad del periodo, con ' +
+                    'buena respuesta (la presion baja de forma progresiva tras el inicio).',
+                    '- Javier Manuel Ortega Diaz: control razonablemente bueno, con desviaciones ocasionales ' +
+                    'de todo tipo. Ademas de insulina toma una estatina (Atorvastatina) para prevencion ' +
+                    'cardiovascular; presion arterial normal.',
+                    '- Laura Isabel Mendez Ruiz: historial de hipoglucemias que llevo a reducir su dosis de ' +
+                    'insulina. Tambien toma un anticonceptivo oral combinado; presion arterial normal.',
+                    '- Pablo Andres Molina Vega: variabilidad glucemica ligada al ejercicio. Toma ibuprofeno ' +
+                    'de forma ocasional para molestias musculares; presion arterial normal, con pulso en ' +
+                    'reposo bajo propio de una persona activa.',
+                    '',
+                    'Los valores se generaron de forma simulada: las comidas atipicas (familiares, restaurante, ' +
+                    'comida rapida, eventos, exceso de cantidad) elevan la glucosa posterior, y el alcohol o ' +
+                    'saltarse una comida reducen la previa o la nocturna. Los casos de Carlos y Ana permiten ' +
+                    'ademas practicar con los informes y graficos de presion arterial (estadisticas, categorias ' +
+                    'ESC/ESH y comentario automatico), incluyendo un ejemplo de mal control por falta de ' +
+                    'adherencia (Carlos) y otro de buen control tras iniciar tratamiento (Ana). No representan ' +
+                    'una relacion causa-efecto medica exacta caso por caso, es un conjunto con fines ' +
+                    'demostrativos.',
+                    '',
+                    'Las fechas se ajustan automaticamente al cargarlas, de modo que el ultimo dia del ' +
+                    'historial coincida siempre con la fecha de hoy (se conservan las mismas distancias entre ' +
+                    'fechas).'
+                ].join('\n');
+            }
+
+            async function copySampleDataInfoToClipboard(showFeedback = true) {
+                const text = getSampleDataDescriptionText();
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(text);
+                        if (showFeedback) toast('Informacion de los pacientes de ejemplo copiada al portapapeles', 'success');
+                        return true;
+                    }
+                } catch (e) {
+                    console.warn('No se pudo copiar al portapapeles:', e);
+                }
+                if (showFeedback) toast('No se pudo copiar automaticamente al portapapeles', 'error');
+                return false;
+            }
+
             async function loadSampleData(options = {}) {
                 const automatic = options.automatic === true;
                 try {
@@ -11112,6 +11204,26 @@ function shiftSampleDatasetToToday(data) {
                         night: nightStats
                     }, { inRange: 0, outOfRange: 0, low: 0, high: 0 }, records)]
                 ];
+
+                // Estadisticas de presion arterial para el paciente actual, en el mismo
+                // rango de fechas que el resto del export (mismo formato que las de
+                // glucosa: media/mediana/min/max/CV + un resumen en lenguaje natural).
+                if (currentPatient && currentPatient.bpEnabled) {
+                    const bpForCurrentPatient = bpFiltered.filter(r => r.patientId === currentPatient.id);
+                    if (bpForCurrentPatient.length) {
+                        const bpStatsXls = computeBpStats(bpForCurrentPatient);
+                        statsRows.push(
+                            ['--- Presion arterial ---', ''],
+                            ['Lecturas de presion exportadas', String(bpForCurrentPatient.length)],
+                            ['Media sistolica/diastolica (mmHg)', `${bpStatsXls.sys.avg.toFixed(1)} / ${bpStatsXls.dia.avg.toFixed(1)}`],
+                            ['Mediana sistolica/diastolica (mmHg)', `${bpStatsXls.sys.median} / ${bpStatsXls.dia.median}`],
+                            ['Minimo sistolica/diastolica (mmHg)', `${bpStatsXls.sys.min} / ${bpStatsXls.dia.min}`],
+                            ['Maximo sistolica/diastolica (mmHg)', `${bpStatsXls.sys.max} / ${bpStatsXls.dia.max}`],
+                            ['CV sistolica', bpStatsXls.sys.cv !== null ? bpStatsXls.sys.cv.toFixed(1) : ''],
+                            ['Resumen presion arterial', generateBpSummary(bpForCurrentPatient)]
+                        );
+                    }
+                }
                 addTableSheet('Estadisticas', statsRows, [{ wch: 28 }, { wch: 60 }]);
 
                 const chartRows = [['Fecha', 'Glucosa antes', 'Glucosa despues', 'Glucosa nocturna', 'Temperatura (C)']];
@@ -14149,6 +14261,14 @@ function shiftSampleDatasetToToday(data) {
                             y += 2;
                             addText(`Ultima lectura: ${last.systolic}/${last.diastolic} mmHg (${sanitizeForPDF(formatDate(last.date))} ${last.time || ''})${last.pulse != null ? ', pulso ' + last.pulse + ' lpm' : ''}`, 11, 'bold');
                             addText(`Media del periodo: ${stats.sys.avg.toFixed(0)}/${stats.dia.avg.toFixed(0)} mmHg  ·  Rango sistolica: ${stats.sys.min}-${stats.sys.max}  ·  Rango diastolica: ${stats.dia.min}-${stats.dia.max}  ·  Lecturas: ${stats.n}`, 10);
+                            y += 2;
+                            addText('Comentario:', 10, 'bold');
+                            for (const l of doc.splitTextToSize(sanitizeForPDF(generateBpSummary(bpRecordsForPdf)), pageWidth - margin * 2)) {
+                                ensureSpace(6);
+                                doc.text(l, margin, y);
+                                y += 4.6;
+                            }
+                            y += 2;
                             // Grafico de evolucion (si el canvas del modal de analisis lo tiene renderizado)
                             const bpCanvas = document.getElementById('bpChart');
                             if (bpCanvas && bpCanvas.width > 0 && bpCanvas.height > 0) {
@@ -14184,7 +14304,7 @@ function shiftSampleDatasetToToday(data) {
                         // para cada uno de los tres momentos de medicion (antes/despues/noche),
                         // ya que mezclar los tres en una sola media puede ser enganoso (los
                         // valores antes y despues de comer se esperan distintos entre si).
-                        function addStatsBlock(title, s) {
+                        function addStatsBlock(title, s, unit = 'mg/dL') {
                             doc.setFontSize(12);
                             doc.setFont(undefined, 'bold');
                             doc.text(title, margin, y);
@@ -14197,15 +14317,15 @@ function shiftSampleDatasetToToday(data) {
                                 return;
                             }
                             const blockData = [
-                                ['Media', s.avg !== null ? s.avg.toFixed(1) + ' mg/dL' : '--'],
-                                ['Mediana', s.median !== null ? s.median.toFixed(1) + ' mg/dL' : '--'],
-                                ['Minimo', s.min !== null ? s.min + ' mg/dL' : '--'],
-                                ['Maximo', s.max !== null ? s.max + ' mg/dL' : '--'],
-                                ['Desviacion estandar', s.std !== null ? s.std.toFixed(1) + ' mg/dL' : '--'],
+                                ['Media', s.avg !== null ? s.avg.toFixed(1) + ' ' + unit : '--'],
+                                ['Mediana', s.median !== null ? s.median.toFixed(1) + ' ' + unit : '--'],
+                                ['Minimo', s.min !== null ? s.min + ' ' + unit : '--'],
+                                ['Maximo', s.max !== null ? s.max + ' ' + unit : '--'],
+                                ['Desviacion estandar', s.std !== null ? s.std.toFixed(1) + ' ' + unit : '--'],
                                 ['Coeficiente de variacion', s.cv !== null ? s.cv.toFixed(1) + '%' : '--'],
-                                ['Rango intercuartilico', s.iqr !== null ? s.iqr.toFixed(1) + ' mg/dL' : '--'],
-                                ['Percentil 25', s.p25 !== null && s.p25 !== undefined ? s.p25.toFixed(1) + ' mg/dL' : '--'],
-                                ['Percentil 75', s.p75 !== null && s.p75 !== undefined ? s.p75.toFixed(1) + ' mg/dL' : '--'],
+                                ['Rango intercuartilico', s.iqr !== null ? s.iqr.toFixed(1) + ' ' + unit : '--'],
+                                ['Percentil 25', s.p25 !== null && s.p25 !== undefined ? s.p25.toFixed(1) + ' ' + unit : '--'],
+                                ['Percentil 75', s.p75 !== null && s.p75 !== undefined ? s.p75.toFixed(1) + ' ' + unit : '--'],
                                 ['Numero de mediciones', s.count]
                             ];
                             for (const [label, value] of blockData) {
@@ -14218,6 +14338,34 @@ function shiftSampleDatasetToToday(data) {
                         addStatsBlock('Antes de comer', stats.before);
                         addStatsBlock('Despues de comer', stats.after);
                         addStatsBlock('Nocturna', stats.night);
+
+                        // ---- Estadisticas de presion arterial (mismo formato que la glucosa) ----
+                        if (currentPatientForPdf.bpEnabled) {
+                            const bpRecordsForStats = state.bpRecords.filter(r => r.patientId === currentPatientForPdf.id);
+                            if (bpRecordsForStats.length) {
+                                const bpStatsForPdf = computeBpStats(bpRecordsForStats);
+                                ensureSpace(24);
+                                doc.setFontSize(14);
+                                doc.setFont(undefined, 'bold');
+                                doc.text('Presion arterial', margin, y);
+                                y += 7;
+                                addStatsBlock('Sistolica', bpStatsForPdf.sys ? { ...bpStatsForPdf.sys, count: bpStatsForPdf.sys.n } : null, 'mmHg');
+                                addStatsBlock('Diastolica', bpStatsForPdf.dia ? { ...bpStatsForPdf.dia, count: bpStatsForPdf.dia.n } : null, 'mmHg');
+                                ensureSpace(20);
+                                doc.setFontSize(11);
+                                doc.setFont(undefined, 'bold');
+                                doc.text('Comentario', margin, y);
+                                y += 6;
+                                doc.setFontSize(10);
+                                doc.setFont(undefined, 'normal');
+                                for (const l of doc.splitTextToSize(sanitizeForPDF(generateBpSummary(bpRecordsForStats)), pageWidth - margin * 2)) {
+                                    ensureSpace(6);
+                                    doc.text(l, margin, y);
+                                    y += 4.6;
+                                }
+                                y += 4;
+                            }
+                        }
                     }
 
                     if (want('cajas')) {
@@ -15506,6 +15654,53 @@ function shiftSampleDatasetToToday(data) {
                         y += 8;
                     }
 
+                    // ---- Tu tension arterial: un comentario sencillo con los valores,
+                    //      solo si el paciente tiene el seguimiento de presion activado.
+                    //      Deliberadamente breve (no repite todas las estadisticas del
+                    //      informe clinico): es la version para el paciente. ----
+                    if (patient.bpEnabled) {
+                        const bpForPatientReport = (state.bpRecords || [])
+                            .filter(r => r.patientId === patient.id)
+                            .filter(r => (!state.filterStart || r.date >= state.filterStart) &&
+                                (!state.filterEnd || r.date <= state.filterEnd));
+                        if (bpForPatientReport.length) {
+                            if (y > doc.internal.pageSize.getHeight() - 45) { doc.addPage(); y = margin; }
+                            doc.setFontSize(12);
+                            doc.setFont(undefined, 'bold');
+                            doc.setTextColor(11, 59, 92);
+                            doc.text('Tu tension arterial', margin, y);
+                            y += 7;
+
+                            const bpSortedForReport = [...bpForPatientReport].sort((a, b) =>
+                                bpRecordTimestamp(a) > bpRecordTimestamp(b) ? -1 : 1);
+                            const lastBp = bpSortedForReport[0];
+                            const bpStatsReport = computeBpStats(bpForPatientReport);
+                            const t = getBpThresholds();
+                            const catSys = getBpCategory(lastBp.systolic, t.sys);
+                            const catDia = getBpCategory(lastBp.diastolic, t.dia);
+                            const catOrder = ['optimal', 'normal', 'high', 'hypertension', 'hypertension-severe'];
+                            const worseCat = catOrder[Math.max(catOrder.indexOf(catSys), catOrder.indexOf(catDia))];
+                            const catPhrase = {
+                                optimal: 'un nivel optimo',
+                                normal: 'un nivel normal',
+                                high: 'un nivel normal-alto; conviene vigilarlo',
+                                hypertension: 'rango de hipertension; comentalo con tu medico',
+                                'hypertension-severe': 'un nivel muy elevado; consulta cuanto antes con tu equipo sanitario'
+                            } [worseCat] || 'un nivel a comentar con tu medico';
+
+                            doc.setFontSize(9.5);
+                            doc.setFont(undefined, 'normal');
+                            doc.setTextColor(60, 75, 90);
+                            const bpLine = `Tu ultima lectura fue de ${lastBp.systolic}/${lastBp.diastolic} mmHg (${formatDate(lastBp.date)}), ` +
+                                `${catPhrase}. De media, en este periodo has tenido ${bpStatsReport.sys.avg.toFixed(0)}/${bpStatsReport.dia.avg.toFixed(0)} mmHg en ${bpForPatientReport.length} lectura(s).`;
+                            for (const l of doc.splitTextToSize(sanitizeForPDF(bpLine), pageWidth - 2 * margin)) {
+                                doc.text(l, margin, y);
+                                y += 4.5;
+                            }
+                            y += 4;
+                        }
+                    }
+
                     // ---- Que puede ayudar: como mucho 3 mensajes, en tono calido ----
                     doc.setFontSize(12);
                     doc.setFont(undefined, 'bold');
@@ -15768,7 +15963,14 @@ function shiftSampleDatasetToToday(data) {
             });
             if (loadSampleDataBtn) loadSampleDataBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                // Se copia primero (mientras el clic todavia cuenta como gesto del
+                // usuario para el navegador) y luego se cargan los datos.
+                copySampleDataInfoToClipboard();
                 loadSampleData();
+            });
+            if (copySampleDataInfoBtn) copySampleDataInfoBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                copySampleDataInfoToClipboard();
             });
             if (importPatientBtn) importPatientBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -16143,8 +16345,6 @@ function shiftSampleDatasetToToday(data) {
             } else {
                 init();
             }
-
         })();
     </script>
-
 </body></html>
