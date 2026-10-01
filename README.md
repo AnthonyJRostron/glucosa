@@ -26,19 +26,22 @@
 6. [Cómo añadir, editar y eliminar registros](#6-cómo-añadir-editar-y-eliminar-registros)
 7. [Sistemas que garantizan la correcta introducción de datos](#7-sistemas-que-garantizan-la-correcta-introducción-de-datos)
 8. [Explicación detallada de cada sección](#8-explicación-detallada-de-cada-sección)
-9. [Para profesionales sanitarios: datos de ejemplo (diabetes.json)](#9-para-profesionales-sanitarios-datos-de-ejemplo-diabetesjson)
-10. [Privacidad, seguridad y cumplimiento](#10-privacidad-seguridad-y-cumplimiento)
-11. [Preguntas frecuentes (FAQ)](#11-preguntas-frecuentes-faq)
-12. [Solución de problemas](#12-solución-de-problemas)
-13. [Glosario](#13-glosario)
-14. [Anexo A: esquema del archivo JSON](#14-anexo-a-esquema-del-archivo-json)
-15. [Anexo B: valores admitidos en campos cerrados](#15-anexo-b-valores-admitidos-en-campos-cerrados)
+9. [Para profesionales sanitarios: datos de ejemplo](#9-para-profesionales-sanitarios-datos-de-ejemplo-diabetesjson)
+10. [Videollamada con el profesional sanitario](#10-videollamada-con-el-profesional-sanitario)
+11. [Alta de médicos y ajustes de la clínica](#11-alta-de-médicos-y-ajustes-de-la-clínica)
+12. [Privacidad, seguridad y cumplimiento](#12-privacidad-seguridad-y-cumplimiento)
+13. [Preguntas frecuentes (FAQ)](#13-preguntas-frecuentes-faq)
+14. [Solución de problemas](#14-solución-de-problemas)
+15. [Glosario](#15-glosario)
+16. [Anexo A: esquema del archivo JSON](#16-anexo-a-esquema-del-archivo-json)
+17. [Anexo B: valores admitidos en campos cerrados](#17-anexo-b-valores-admitidos-en-campos-cerrados)
+18. [Anexo C: estructura de la base de datos (SQLite)](#18-anexo-c-estructura-de-la-base-de-datos-sqlite)
 
 ---
 
 ## 1. Descripción general
 
-**Diario de Diabetes** es una aplicación autocontenida en un único archivo, sin instalación y sin servidor. Todos los datos que introduces se guardan **localmente en tu propio navegador** y puedes exportarlos o importarlos como un archivo \`.json\`.
+**Diario de Diabetes** es una aplicación autocontenida en un único archivo, sin instalación y sin servidor. Todos los datos que introduces se guardan **localmente en tu propio navegador** y puedes exportarlos o importarlos como un archivo `.json`. Los datos solo salen de tu dispositivo si **tú** decides enviarlos (por email o por videollamada).
 
 La app permite a una persona con diabetes:
 
@@ -48,9 +51,11 @@ La app permite a una persona con diabetes:
 - **Recibir automáticamente** los datos meteorológicos de su localidad (temperatura, humedad, precipitación, presión y viento), que se guardan junto al registro porque influyen en el control glucémico.
 - **Consultar resúmenes y estadísticas** de los últimos días, semanas o meses.
 - **Generar informes PDF** totalmente configurables para llevar a la consulta.
-- **Enviar por correo** a la clínica el archivo JSON con sus datos, antes de la consulta.
+- **Registrar la presión arterial** (opcional, se activa en el perfil clínico): sistólica, diastólica, pulso y notas.
+- **Enviar por email** a la clínica el archivo JSON con sus datos, antes de la consulta.
+- **Hacer una videollamada** con su profesional sanitario, con chat y pantalla compartida, y **compartirle sus datos de forma cifrada** durante la llamada. El médico solo puede *verlos* mientras dura la llamada; para que pueda *guardarlos* hace falta un segundo permiso expreso del paciente (ver [sección 10](#10-videollamada-con-el-profesional-sanitario)).
 
-La app también está pensada para que **profesionales sanitarios** (endocrinólogos, educadores en diabetes, enfermería, médicos de familia) puedan revisar informes de sus pacientes, comparar tendencias y demostrar el funcionamiento de la herramienta con **datos de ejemplo realistas** incluidos en el archivo \`diabetes.json\`.
+La app también está pensada para que **profesionales sanitarios** (endocrinólogos, educadores en diabetes, enfermería, médicos de familia) puedan revisar informes de sus pacientes, comparar tendencias, atender por videollamada y demostrar el funcionamiento de la herramienta con **datos de ejemplo ficticios** incluidos en el archivo `diabetes.json`.
 
 > Recuerda el aviso del principio: **la app no diagnostica ni recomienda tratamientos**. Solo un profesional sanitario puede hacerlo, y solo la clínica que te proporcionó la app puede corregir tus datos si detectas errores.
 
@@ -58,54 +63,50 @@ La app también está pensada para que **profesionales sanitarios** (endocrinól
 
 ## 2. Inicio rápido para pacientes
 
-**Al arrancar la app por primera vez verás dos opciones claras:**
+Al abrir la app por primera vez en un navegador sin datos aparece la pantalla **«Antes de empezar»**, que pregunta cómo quieres continuar:
 
-- **Descargar datos de ejemplo** (para que explores cómo funciona la app con información ya rellena).
-- **Añadir un nuevo paciente** (para empezar tu propio diario desde cero).
+- **Soy paciente** → crea directamente tu propio perfil de paciente (ruta A). **No** se te ofrecen los datos de ejemplo: son solo para uso clínico y formativo.
+- **Soy profesional de la salud** → eliges entre **«+ Añadir nuevo paciente»** o **«Ver datos de ejemplo»** (ruta B).
 
-### 2.1 Ruta A — Solo quiero ver cómo funciona
+### 2.1 Ruta A — Soy paciente y quiero crear mi diario
 
-1. Pulsa **"Descargar datos de ejemplo"**.
-2. La app carga **automáticamente** el archivo \`diabetes.json\` incluido con la aplicación: **no tienes que buscarlo ni seleccionarlo manualmente**.
-3. La app carga cinco pacientes de ejemplo con un año completo de registros.
-4. Explora los registros, los informes PDF y las gráficas.
-5. Cuando quieras empezar tu propio diario, elimina los datos de ejemplo (o crea tu propio paciente y trabaja en paralelo).
-
-### 2.2 Ruta B — Quiero crear mi propio diario
-
-1. Pulsa **"Añadir un nuevo paciente"**.
-2. Rellena tus **datos personales y clínicos** (nombre, fecha de nacimiento, tipo de diabetes…).
+1. Pulsa **«Soy paciente»**.
+2. Rellena tus **datos personales y clínicos** (nombre, fecha de nacimiento, tipo de diabetes…) y pulsa **«Guardar datos»**. *Sin nombre guardado no podrás compartir tus datos por videollamada.*
 3. Añade tus **medicamentos** con la **dosis habitual** y la **hora habitual**.
-4. Indica tu **localidad** para que la app descargue la meteorología.
-5. Empieza a registrar glucemias e insulina.
+4. Indica tu **localidad** para que la app descargue la meteorología (o usa **«Usar mi ubicación»**).
+5. Empieza a registrar mediciones. Si tu clínica te lo indica, activa **«Monitorizar presión arterial»** en el perfil clínico.
 
-### 2.3 Ruta C — Soy profesional sanitario y quiero cargar el ejemplo clínico
+### 2.2 Ruta B — Soy profesional sanitario y quiero explorar con datos de ejemplo
 
-1. Pulsa **"Descargar datos de ejemplo"**.
-2. La app carga **automáticamente** el archivo \`diabetes.json\`: no hay que seleccionar ningún archivo ni buscarlo en el dispositivo.
-3. La app carga los cinco pacientes de ejemplo con sus 365 registros cada uno.
+1. Pulsa **«Soy profesional de la salud»** → **«Ver datos de ejemplo»**.
+2. Lee la descripción de los **5 pacientes ficticios** y pulsa **«Sí, cargar los 5 pacientes de ejemplo»**. La app carga `diabetes.json` **automáticamente** (debe estar en la misma carpeta que la app); no hay que buscarlo ni seleccionarlo.
+3. Las fechas se **desplazan automáticamente** para que el último día del historial coincida con **hoy**.
+4. Cuando termines, borra los datos de ejemplo con **«Borrar todo - empezar de nuevo»** antes de usar la app con un paciente real.
+
+### 2.3 ¿Y si ya tengo datos?
+
+Si en este navegador ya existen pacientes, la pantalla «Antes de empezar» **no aparece** y tus datos **nunca se sustituyen** al abrir la app. Si borras todos los pacientes, la pantalla vuelve a aparecer.
 
 ### 2.4 Cómo llevar los datos a la consulta (lo más importante)
 
-Cuando vayas a la consulta, **tienes tres formas de entregar tus datos** al profesional sanitario, de la más recomendable a la menos:
+Tienes **cuatro formas** de entregar tus datos al profesional sanitario:
 
-1. **Recomendado — Enviar el correo desde la app.** Pulsa el botón de **"Enviar por correo"**. La app:
-   - Genera un **archivo JSON** con todos tus datos.
-   - Lo **guarda automáticamente en el directorio de descargas por defecto** de tu dispositivo (carpeta **Descargas** en la mayoría de sistemas; puede variar según el navegador y el sistema operativo).
-   - Abre tu cliente de correo con la dirección de la clínica ya puesta y el archivo JSON adjunto.
-   - Puedes **enviarlo directamente a la clínica** antes de la consulta, para que el profesional lo revise con antelación.
-2. **Alternativa — Generar y llevar el PDF impreso.** El PDF es suficiente para una revisión rápida. Puedes generarlo desde el botón **"Informe PDF"** y, si quieres, imprimirlo o guardarlo manualmente.
-3. **Alternativa — Llevar el JSON en un pendrive o en el propio dispositivo.** El JSON contiene **todos** los datos (incluidos los que no caben en el PDF), y la clínica puede cargarlo en sus herramientas para una revisión más profunda.
+1. **Videollamada con compartición de datos.** Si tu médico te atiende por vídeo, puedes enviarle tus datos **cifrados** durante la llamada (ver [sección 10](#10-videollamada-con-el-profesional-sanitario)). Es la opción más cómoda para una consulta telemática: no hay que enviar ni adjuntar nada.
+2. **Enviar por email antes de la consulta.** Pulsa **«✉️ Enviar por email»** (cabecera). La app genera el archivo JSON con tus datos y usa una de estas dos vías, e **informa siempre de cuál ha usado**:
+   - **Compartir con archivo adjunto** (si tu dispositivo lo permite, p. ej. móviles): se abre el panel nativo para compartir el archivo directamente con tu app de correo.
+   - **Descarga + correo**: el JSON se guarda en la carpeta de descargas y se abre tu cliente de correo con destinatario, asunto y texto ya rellenados. **Por seguridad, los navegadores no permiten adjuntar archivos automáticamente: tendrás que adjuntar el JSON descargado a mano antes de enviar.**
+3. **Informe PDF.** Con **«Imprimir PDF»** puedes generar la *versión para el paciente* (resumen corto, sin DNI ni nº de Seguridad Social) o el *informe clínico* completo (ver [§8.11](#811-panel-de-informes-y-pdf)).
+4. **Llevar el JSON en un pendrive o en el propio dispositivo.** Contiene **todos** los datos y la clínica puede cargarlo en sus herramientas.
 
-> **¿Dónde se guardan los archivos exportados?** Todos los archivos que la app descarga (el JSON al enviar el correo y el JSON al usar **Exportar Pacientes**) se guardan en el **directorio de descargas por defecto** del dispositivo, que habitualmente es la carpeta **Descargas**. El PDF, en cambio, se genera en el navegador y solo se guarda si tú lo indicas en el diálogo de impresión/guardado.
+> **¿Dónde se guardan los archivos exportados?** Los archivos que la app descarga (el JSON del email, **Copia de seguridad**, **Exportar Pacientes**, **Exportar Excel**) van al **directorio de descargas por defecto** del dispositivo (normalmente la carpeta **Descargas**). El PDF se genera en el navegador y solo se guarda si lo indicas en el diálogo de impresión/guardado.
 
-> **Consejo:** envía el correo **al menos 24–48 horas antes** de la consulta. Así el profesional puede revisar tus datos con calma y aprovechar mejor el tiempo de visita.
+> **Consejo:** si vas a enviar el email, hazlo **al menos 24–48 horas antes** de la consulta.
 
 ### 2.5 ¿Con qué frecuencia debo exportar mis datos?
 
-**Exporta tus datos al menos una vez a la semana.** La app guarda los datos en el navegador, y un borrado accidental, un cambio de dispositivo o una limpieza del navegador pueden hacerte perderlo todo. Exportar semanalmente es una red de seguridad sencilla. **Utiliza el botón «Copia de seguridad» que aparece junto a tu nombre en la barra superior.**
+**Exporta tus datos al menos una vez a la semana.** La app guarda los datos en el navegador, y un borrado accidental, un cambio de dispositivo o una limpieza del navegador pueden hacerte perderlo todo. Exportar semanalmente es una red de seguridad sencilla. **Utiliza el botón «Copia de seguridad» de la ficha del paciente.**
 
-> **Importante:** exportar no es lo mismo que enviar el correo a la clínica. Exportar es una **copia de seguridad personal**; enviar el correo es **compartir con el profesional sanitario** para la consulta.
+> **Importante:** exportar no es lo mismo que enviar los datos a la clínica. Exportar es una **copia de seguridad personal**; el email o la videollamada sirven para **compartir con el profesional sanitario**. Además, **las fichas temporales recibidas por videollamada no se pueden exportar** (ver [sección 10](#10-videollamada-con-el-profesional-sanitario)).
 
 ---
 
@@ -118,9 +119,11 @@ Cuando vayas a la consulta, **tienes tres formas de entregar tus datos** al prof
 | Navegador | Chrome / Edge 100+, Firefox 100+, Safari 15+ |
 | Sistema operativo | Windows 10+, macOS 12+, Linux, Android 9+, iOS 15+ |
 | Memoria RAM | 2 GB |
-| Almacenamiento libre | ≥ 50 MB |
+| Almacenamiento libre | ≥ 100 MB (la base de datos de la app crece con el uso; ver §3.3) |
 | **Conexión a internet** | **Necesaria para las librerías de terceros que dibujan las gráficas y que exportan el PDF** |
 | JavaScript | Activado (imprescindible) |
+| **WebAssembly e IndexedDB** | Disponibles (lo están en todos los navegadores de la fila anterior). Si no lo están, la app usa un almacenamiento básico más limitado (ver §3.3) |
+| **Videollamada** | Cámara y micrófono, permisos del navegador concedidos y página servida por **HTTPS** (necesario también para el cifrado) |
 
 ### 3.2 Requisitos funcionales
 
@@ -129,15 +132,26 @@ Cuando vayas a la consulta, **tienes tres formas de entregar tus datos** al prof
   - Cargar las **librerías de terceros** que dibujan las **gráficas**.
   - Cargar las **librerías de terceros** que generan la **exportación a PDF**.
   - Descargar la **meteorología** (si tienes ubicación configurada).
+  - Usar la **videollamada** (ver §10): carga la librería de conexión y usa servidores de terceros para establecer la llamada.
 - **No requiere registro ni contraseña.**
-- **Compatible con exportación**: puedes descargar todo el diario como archivo \`.json\`.
-- **Generación de PDF en cliente**: el PDF se crea en tu navegador; los datos no se envían a ningún servidor salvo que tú decidas enviarlos por correo desde la app.
+- **Compatible con exportación**: puedes descargar todo el diario como archivo `.json`.
+- **Generación de PDF en cliente**: el PDF se crea en tu navegador; los datos no se envían a ningún servidor salvo que tú decidas enviarlos por email o por videollamada desde la app.
 
 ### 3.3 Limitaciones conocidas
 
 - **Sin internet, las gráficas y el PDF no funcionan.** El registro de glucemias e insulina sí funciona sin conexión, pero no podrás visualizar gráficas ni generar PDF hasta que recuperes la conexión.
-- El **almacenamiento local** está vinculado al navegador y al dispositivo. Si borras los datos del navegador, pierdes el diario. **Exporta semanalmente.**
-- El **modo incógnito** no conserva los datos al cerrar la ventana.
+- **Base de datos local (SQLite).** Los datos se guardan en una base de datos SQLite que vive **en tu navegador** (dentro de IndexedDB). El motor SQLite viene **incluido en el propio archivo de la app**, así que **no necesita internet** para funcionar. Está vinculada al navegador y al dispositivo: si borras los datos del sitio o del navegador, pierdes el diario. **Exporta semanalmente.**
+- **Los datos antiguos se trasladan solos.** Si ya usabas una versión anterior de la app (que guardaba un JSON en el navegador), al abrir esta versión se **trasladan automáticamente** a la base de datos y la app avisa con *«Tus datos se han pasado a la nueva base de datos del navegador»*. La copia antigua solo se borra **después de comprobar que han pasado todos los datos**.
+- **Los JSON siguen funcionando.** Puedes **importar** copias de seguridad en JSON de **cualquier versión anterior** (**Importar Pacientes** / **Importar paciente**) y **exportar** en JSON como siempre. El formato del JSON no ha cambiado.
+- **Capacidad.** Una base de datos en el navegador admite **mucho más** que el antiguo límite de unos 5 MB: depende del navegador y del dispositivo, normalmente **cientos de MB**. Como orientación (medido con datos de prueba, no con pacientes reales):
+  - **5 pacientes con un año de datos** (3 lecturas al día y su medicación, más presión arterial en 2 de ellos) ocupan unos **5 MB**, es decir, **cerca de 1 MB por paciente y año** con uso intensivo y menos con uso ligero.
+  - Un paciente que usa la app cada día durante **10 años** ocuparía del orden de **10 MB**, sin problema.
+  - **Un médico** que guarde fichas de pacientes recibidas por videollamada puede mantener **decenas de pacientes** sin notar lentitud. Para **cientos de pacientes**, la app no es un archivo clínico: usa el sistema de historia clínica de la clínica.
+  - Cada vez que guardas, la app vuelve a escribir el archivo de la base de datos. Con **varias decenas de MB** puede notarse más lenta, sobre todo en móviles antiguos: **exporta y archiva** los años antiguos.
+  - Si aparece **«almacenamiento lleno»**, exporta una copia de seguridad y libera espacio en el dispositivo.
+- **Una sola pestaña a la vez.** Si abres la app en dos pestañas o ventanas y cambias datos en una, la otra muestra el aviso rojo *«Los datos se han modificado en otra pestaña… recarga»* y **no guarda** nada hasta recargar, para que no se pisen los datos.
+- **Almacenamiento básico de reserva.** Si el navegador no permite usar la base de datos (por ejemplo, algunos modos privados), la app avisa y usa el sistema anterior (JSON en el navegador, unos **5 MB**). Cuando vuelva a funcionar la base de datos, esos datos se trasladan solos.
+- El **modo incógnito / privado** no conserva los datos al cerrar la ventana.
 - La **meteorología** requiere conexión en el momento de consultar; si no hay conexión, el registro se guarda con los campos meteorológicos vacíos.
 - Los **PDF** se generan con el motor de impresión del navegador. Si el PDF sale con saltos raros, revisa los márgenes de impresión.
 
@@ -151,14 +165,15 @@ La primera vez que se abre la app, el diario está vacío. Antes de registrar na
 
 | Campo | Obligatorio | Descripción | Ejemplo |
 |---|---|---|---|
-| **Nombre completo** | Sí | Nombre y apellidos del paciente. Aparece en los informes. | \`Javier Manuel Ortega Díaz\` |
-| **DNI / Identificador** | Recomendado | Documento de identidad o número de historia clínica. | \`12345678Z\` |
-| **Número de la Seguridad Social (NUSS)** | Opcional | Número de afiliación a la Seguridad Social. Formato habitual en España: **12 dígitos** (2 de provincia + 8 del número + 2 de control), a menudo escrito con barras y guiones: \`28/12345678-90\`. | \`28/12345678-90\` |
-| **Sexo** | Sí | \`Hombre\`, \`Mujer\` o \`Sin especificar\`. Condiciona las opciones de embarazo. | \`male\` |
-| **Fecha de nacimiento** | Sí | Determina si el paciente es niño/adolescente o adulto, y permite calcular la edad. | \`1985-04-10\` |
-| **Tipo de diabetes** | Sí | \`Tipo 1\`, \`Tipo 2\` o \`Gestacional\`. | \`type1\` |
-| **Grupo de paciente** | Sí | \`Adulto\`, \`Niño/adolescente\` o \`Embarazo\`. | \`adult\` |
-| **Estado de embarazo** | Solo mujeres | \`No embarazada\`, \`Embarazada\`, \`Lactancia\` o \`Postparto\`. | \`not_pregnant\` |
+| **Nombre completo** | Sí | Nombre y apellidos del paciente. Aparece en los informes. | `Javier Manuel Ortega Díaz` |
+| **DNI / Identificador** | Recomendado | Documento de identidad o número de historia clínica. | `12345678Z` |
+| **Número de la Seguridad Social (NUSS)** | Opcional | Número de afiliación a la Seguridad Social. Formato habitual en España: **12 dígitos** (2 de provincia + 8 del número + 2 de control), a menudo escrito con barras y guiones: `28/12345678-90`. | `28/12345678-90` |
+| **Sexo** | Sí | `Hombre`, `Mujer` o `Sin especificar`. Condiciona las opciones de embarazo. | `male` |
+| **Fecha de nacimiento** | Sí | Determina si el paciente es niño/adolescente o adulto, y permite calcular la edad. | `1985-04-10` |
+| **Tipo de diabetes** | Sí | `Tipo 1`, `Tipo 2` o `Gestacional`. | `type1` |
+| **Grupo de paciente** | Sí | `Adulto`, `Niño/adolescente` o `Embarazo`. | `adult` |
+| **Monitorizar presión arterial** | Opcional | Casilla del perfil clínico. Si se activa, aparecen la sección de presión arterial y su análisis. | — |
+| **Estado de embarazo** | Solo mujeres | `No embarazada`, `Embarazada`, `Lactancia` o `Postparto`. | `not_pregnant` |
 
 > **Nota sobre la categoría de embarazo:** la **categoría de embarazo** (primer, segundo o tercer trimestre) **no se registra en la app**. Si tu profesional sanitario necesita esa información, la manejará en la clínica con sus propias herramientas.
 
@@ -166,7 +181,7 @@ La primera vez que se abre la app, el diario está vacío. Antes de registrar na
 
 ### 4.2 Unidades de glucosa y objetivos
 
-- **Unidad de glucosa**: elige \`mg/dL\` (habitual en España, Estados Unidos y Latinoamérica) o \`mmol/L\` (habitual en Reino Unido y algunos países europeos). Todos los valores introducidos a partir de ese momento se interpretarán y mostrarán en esa unidad. Si cambias de unidad más adelante, la app convierte automáticamente los valores ya guardados.
+- **Unidad de glucosa**: elige `mg/dL` (habitual en España, Estados Unidos y Latinoamérica) o `mmol/L` (habitual en Reino Unido y algunos países europeos). Todos los valores introducidos a partir de ese momento se interpretarán y mostrarán en esa unidad. Si cambias de unidad más adelante, la app convierte automáticamente los valores ya guardados.
 - **Objetivos por defecto**:
   - Adulto no embarazado: **70–180 mg/dL** (3,9–10,0 mmol/L).
   - Embarazo: **63–140 mg/dL** (3,5–7,8 mmol/L).
@@ -179,33 +194,33 @@ En la sección de **Medicamentos** se añaden los fármacos que el paciente usa 
 
 | Campo | Descripción | Ejemplo |
 |---|---|---|
-| **Nombre comercial** | Denominación tal como aparece en el envase. | \`ABASAGLAR 100 UNIDADES/ML KWIKPEN SOLUCION INYECTABLE EN PLUMA PRECARGADA\` |
-| **Principio activo** | Fármaco real. | \`Insulina glargina\` |
-| **Laboratorio** | Titular del medicamento. | \`Eli Lilly Nederland B.V.\` |
-| **Clase** | Clasificación ATC. | \`Insulinas y analogos de accion prolongada (A10AE04)\` |
-| **Vía de administración** | Subcutánea, oral, etc. | \`Subcutanea\` |
-| **Unidad** | Unidad de medida (UI, mg, mcg…). | \`UI\` |
-| **Riesgo de hipoglucemia** | Marca si el fármaco puede provocar hipoglucemias. | \`false\` para análogos basales, \`true\` para insulina rápida |
-| **Fuente** | Origen del dato (CIMA, manual…). | \`cima\` |
-| **Dosis predeterminada** | Dosis que la app propondrá por defecto al registrar. | \`16\` |
-| **Unidad predeterminada** | Unidad que se mostrará por defecto. | \`ui\` |
-| **Posibles dosis** | Lista de presentaciones disponibles. | \`[{ valor: "100", unidad: "U" }]\` |
+| **Nombre comercial** | Denominación tal como aparece en el envase. | `ABASAGLAR 100 UNIDADES/ML KWIKPEN SOLUCION INYECTABLE EN PLUMA PRECARGADA` |
+| **Principio activo** | Fármaco real. | `Insulina glargina` |
+| **Laboratorio** | Titular del medicamento. | `Eli Lilly Nederland B.V.` |
+| **Clase** | Clasificación ATC. | `Insulinas y analogos de accion prolongada (A10AE04)` |
+| **Vía de administración** | Subcutánea, oral, etc. | `Subcutanea` |
+| **Unidad** | Unidad de medida (UI, mg, mcg…). | `UI` |
+| **Riesgo de hipoglucemia** | Marca si el fármaco puede provocar hipoglucemias. | `false` para análogos basales, `true` para insulina rápida |
+| **Fuente** | Origen del dato (CIMA, manual…). | `cima` |
+| **Dosis predeterminada** | Dosis que la app propondrá por defecto al registrar. | `16` |
+| **Unidad predeterminada** | Unidad que se mostrará por defecto. | `ui` |
+| **Posibles dosis** | Lista de presentaciones disponibles. | `[{ valor: "100", unidad: "U" }]` |
 
 ### 4.4 Dosis habitual y hora habitual
 
 En cada medicamento debes indicar **dos cosas clave**:
 
-1. **Dosis habitual**: la dosis que el paciente suele administrarse. La app la usará como valor por defecto al abrir el formulario de nueva dosis y como referencia para avisar si un registro se aleja mucho de lo habitual.
+1. **Dosis habitual**: la dosis que el paciente suele administrarse. La app la usará como valor por defecto al registrar la toma en una medición y como referencia para avisar si un registro se aleja mucho de lo habitual.
 2. **Hora habitual**: la hora a la que suele administrarse. La app la usará para:
    - Ordenar los registros y agruparlos por "toma de mañana / mediodía / tarde / noche".
    - Avisar si una dosis no se ha registrado en las horas siguientes a la hora habitual.
    - Dibujar correctamente las gráficas de "insulina a lo largo del día".
 
-> **Ejemplo**: una persona que se pone 16 UI de insulina glargina a las 21:00 tendría \`dosisPredeterminada: "16"\` y hora habitual \`21:00\`.
+> **Ejemplo**: una persona que se pone 16 UI de insulina glargina a las 21:00 tendría `dosisPredeterminada: "16"` y hora habitual `21:00`.
 
 ### 4.5 Ubicación para la meteorología
 
-Indica la **ciudad y el país** donde vives habitualmente (por ejemplo, \`Vigo, Pontevedra\` o \`Barcelona, España\`). La app usará esa ubicación para:
+Indica la **ciudad y el país** donde vives habitualmente (por ejemplo, `Vigo, Pontevedra` o `Barcelona, España`). La app usará esa ubicación para:
 
 - Descargar automáticamente la **temperatura, humedad, precipitación, presión atmosférica y viento** del día de cada registro.
 - Guardar el nombre de la localidad junto al registro (útil si viajas: los registros de viaje conservarán la localidad de destino).
@@ -233,47 +248,36 @@ Esto evita que la pantalla se llene de campos que solo se rellenan una vez y dej
 
 La aplicación distingue **dos grandes tipos de registro**:
 
-1. **Registros de glucemia** (\`records\`): recogen las glucemias del día y el contexto (comida, ejercicio, ánimo, meteorología…).
-2. **Registros de medicación** (\`medicationLog\`): recogen cada dosis de insulina u otro fármaco administrada (u omitida).
+1. **Registros de glucemia** (`records`): recogen las glucemias del día y el contexto (comida, ejercicio, ánimo, meteorología…).
+2. **Registros de medicación** (`medicationLog`): recogen cada dosis de insulina u otro fármaco administrada (u omitida).
 
-### 6.1 Registro diario de glucemia
+### 6.1 Registro de una medición (glucemia y contexto)
 
-Para crear un registro:
+1. En la sección **«Registrar medición»** completa el formulario:
+   - **Fecha** (por defecto, hoy) y **Hora / momento**: `Desayuno`, `Almuerzo / Comida`, `Cena` o `Nocturna (antes de dormir)`.
+   - **Glucosa antes**, **Glucosa después** (postprandial, opcional) y **Glucosa nocturna** (opcional), con su rango orientativo bajo cada campo.
+   - **Medicamentos de esta medición**: marca la toma realizada o indica que se ha **omitido**. Puedes cambiar la dosis antes de guardar y usar **«Añadir medicamento»**.
+   - **Ejercicio**: tipo (Sin ejercicio, Caminata, Caminata rápida, Trotar/Correr, Natación, Gimnasio, Pilates, Ciclismo, Yoga, Baile, Tenis), duración en minutos y pasos (opcional).
+   - **Estado de ánimo / síntomas físicos**: selección múltiple (emocionales y físicos).
+   - **Contexto de la comida** (opcional): plan recomendado, comida familiar, comida de trabajo, restaurante, comida rápida, alcohol, evento especial, exceso de cantidad, salté una comida…
+   - **Comentarios / notas**.
+   - **Meteorología**: se obtiene automáticamente de Open-Meteo para la fecha del registro (ver §4.5). Si falla la conexión, puedes introducirla a mano en **«Entrada manual de clima»**.
+2. Pulsa **«Guardar medición»**. Si ya existe una medición de hoy para ese momento, usa **«Editar medición de hoy»**.
+3. La **severidad** se calcula automáticamente (ver §7.4).
 
-1. Pulsa **"Nuevo registro"**.
-2. Se abrirá un formulario con:
-   - **Fecha** (por defecto, hoy).
-   - **Comida** a la que corresponde el registro: \`Desayuno\`, \`Comida\`, \`Cena\`, \`Recena\` u \`Otro\`.
-   - **Glucemia antes** de la comida.
-   - **Glucemia después** de la comida (opcional).
-   - **Glucemia nocturna** (opcional).
-   - **Ejercicio**: tipo (\`Caminar\`, \`Bici\`, \`Natación\`, \`Correr\`, \`Otro\`) y duración en minutos.
-   - **Estado de ánimo**: uno o varios de \`Normal\`, \`Estresado\`, \`Ansioso\`, \`Cansado\`, \`Fatiga\`.
-   - **Contexto dietético**: uno o varios de \`Plan recomendado\`, \`Comida familiar\`, \`Exceso de cantidad\`, \`Alcohol\`, \`Salté una comida\`, \`Comida rápida\`, \`Restaurante\`, \`Evento especial\`, \`Comida de trabajo\`, \`Otro imprevisto\`.
-   - **Comentarios** libres.
-   - **Severidad** (se calcula automáticamente, ver §7.4).
-   - **Meteorología**: se rellena sola si tienes ubicación configurada y conexión.
-3. Pulsa **"Guardar"**. El registro aparece inmediatamente en la lista cronológica.
+> **Recordatorio de días sin registrar:** poco después de abrir la app, si hay días recientes sin datos, aparece el aviso **«Tienes días sin registrar»** con botones para preseleccionar cada fecha.
 
-### 6.2 Registro de medicación / inyecciones
+### 6.2 Registro de medicación
 
-Para registrar una dosis:
+La toma de insulina u otros fármacos se registra **dentro de la propia medición** («Medicamentos de esta medición»): marca la toma o márcala como **omitida**, ajusta la dosis si hace falta y guarda. Distinguir *omitida* de *no registrada* es importante: en los informes son eventos distintos. El registro histórico se guarda en `medicationLog`.
 
-1. Pulsa **"Nueva dosis"** o el botón rápido del medicamento correspondiente.
-2. Se abrirá un formulario con:
-   - **Medicamento** (ya preseleccionado si usas el botón rápido).
-   - **Dosis** (por defecto, la dosis habitual configurada).
-   - **Unidad** (UI, mg…).
-   - **Fecha y hora** (por defecto, ahora).
-   - **Omitida**: marca esta casilla si **no** te has puesto la dosis (olvido, decisión médica, etc.).
-   - **Nota**: campo libre para explicar el motivo.
-3. Pulsa **"Guardar"**.
+### 6.2 bis Registro de presión arterial (opcional)
 
-> La casilla **Omitida** es importante: permite distinguir "no me puse la insulina" de "no registré la dosis". En los informes se muestran como eventos distintos.
+Solo aparece si activas **«Monitorizar presión arterial»** en el perfil clínico. Introduce **fecha, hora, sistólica, diastólica, pulso y notas** y pulsa **«Agregar»** (o **«Cancelar»** al editar). El **historial de presión** se muestra debajo y el **análisis de presión arterial** (estadísticas, categorías ESC/ESH y comentario automático) está en el análisis clínico y en el informe PDF.
 
 ### 6.3 Edición y borrado
 
-- **Editar**: pulsa sobre cualquier registro de la lista. Se abrirá el formulario con los datos cargados.
+- **Editar**: pulsa sobre cualquier registro del historial. Usa **«Mostrar todas las mediciones»** para ver el historial completo. Se abrirá el formulario con los datos cargados.
 - **Eliminar**: dentro del formulario de edición, pulsa **"Eliminar"**. La app pedirá confirmación antes de borrar.
 - **Deshacer**: si acabas de borrar un registro, aparece un aviso con **"Deshacer"** durante unos segundos.
 
@@ -301,7 +305,7 @@ La app aplica validaciones **mientras escribes**, no solo al guardar:
 
 ### 7.2 Gestión de valores ausentes
 
-- **Glucemia después** y **glucemia nocturna** son opcionales. Se guardan como \`null\` y **no cuentan como cero** en las estadísticas.
+- **Glucemia después** y **glucemia nocturna** son opcionales. Se guardan como `null` y **no cuentan como cero** en las estadísticas.
 - **Ejercicio** puede quedar vacío.
 - **Meteorología**: si no hay conexión o no hay ubicación configurada, los campos quedan vacíos, pero el registro se guarda.
 - **Estado de ánimo**, **contexto dietético**: listas vacías si no se selecciona nada.
@@ -309,7 +313,7 @@ La app aplica validaciones **mientras escribes**, no solo al guardar:
 
 Reglas estadísticas:
 
-- Los **valores \`null\` se excluyen** de medias, medianas, percentiles y desviaciones estándar.
+- Los **valores `null` se excluyen** de medias, medianas, percentiles y desviaciones estándar.
 - En los gráficos, los huecos se representan como **ausencia de punto**, no como cero.
 - En los informes PDF se indica el **número de valores disponibles** sobre el total de días del período.
 
@@ -324,19 +328,22 @@ Reglas estadísticas:
 
 | Severidad | Criterio orientativo |
 |---|---|
-| \`null\` | Glucemia dentro de objetivos y sin síntomas. |
-| \`mild\` | Glucemia ligeramente fuera de rango (180–250 mg/dL en ayunas, o 55–70 mg/dL). |
-| \`moderate\` | Glucemia claramente fuera de rango (> 250 mg/dL o 40–54 mg/dL). |
-| \`urgent\` | Glucemia muy fuera de rango (> 300 mg/dL o < 40 mg/dL). |
-| \`emergency\` | Glucemia extrema con riesgo vital (< 30 mg/dL, > 400 mg/dL o pérdida de conciencia). |
-| \`severe\` | Episodio grave documentado (convulsiones, ingreso, glucagón). |
+| `null` | Glucemia dentro de objetivos y sin síntomas. |
+| `mild` | Glucemia ligeramente fuera de rango (180–250 mg/dL en ayunas, o 55–70 mg/dL). |
+| `moderate` | Glucemia claramente fuera de rango (> 250 mg/dL o 40–54 mg/dL). |
+| `urgent` | Glucemia muy fuera de rango (> 300 mg/dL o < 40 mg/dL). |
+| `emergency` | Glucemia extrema con riesgo vital (< 30 mg/dL, > 400 mg/dL o pérdida de conciencia). |
+| `severe` | Episodio grave documentado (convulsiones, ingreso, glucagón). |
 
 Este cálculo **no sustituye el juicio clínico**; es solo una ayuda para clasificar y priorizar la revisión de los registros.
 
 ### 7.5 Exportar Pacientes e Importar Pacientes
 
-- **Exportar Pacientes**: descarga un archivo \`.json\` con **todos** los pacientes, medicamentos, registros de glucemia y registro de medicación.
-- **Importar Pacientes**: carga un archivo \`.json\` previamente exportado. La app **valida el esquema** antes de cargarlo.
+- **Exportar Pacientes**: descarga un archivo `.json` con **todos** los pacientes, medicamentos, registros de glucemia, presión arterial y registro de medicación.
+- **Exportar Excel (Paciente actual)**: descarga una hoja de cálculo del paciente activo.
+- **Copia de seguridad**: descarga el JSON del paciente actual.
+- **Importar Pacientes** (o **Importar paciente**, en la ficha): carga un archivo `.json` previamente exportado. La app **valida el esquema** antes de cargarlo.
+- Las **fichas temporales** recibidas por videollamada **no se incluyen** en ninguna exportación.
 
 **Recomendación de frecuencia:** exporta **al menos una vez a la semana**.
 
@@ -348,39 +355,39 @@ Este cálculo **no sustituye el juicio clínico**; es solo una ayuda para clasif
 
 ### 8.1 Cabecera y selector de paciente
 
-La cabecera muestra el **nombre del paciente activo**, **edad y tipo de diabetes**, **unidad de glucosa** y **botones rápidos**: *Nuevo registro*, *Nueva dosis*, *Informe PDF*, *Enviar por correo*.
+La cabecera muestra el nombre y los datos de contacto de la clínica y los botones **📹 Videollamada**, **✉️ Enviar por email**, el **selector de tema** (claro/oscuro) y **Ayuda**. En la ficha del paciente están **+ Nuevo paciente**, **Importar paciente**, **Copia de seguridad**, **Cambiar paciente**, **Eliminar paciente** y **Guardar datos**. Cuando se ve una ficha recibida por videollamada, aparece un **aviso amarillo «Ficha temporal»**.
 
 ### 8.2 Panel de pacientes
 
-Corresponde al array \`patients\`. Incluye \`id\`, \`name\`, \`dni\`, \`socialSecurity\`, \`gender\`, \`dateOfBirth\`, \`diabetesType\`, \`patientGroup\`, \`pregnancyStatus\`, \`pregnancyCategory\`, \`glucoseUnit\`, \`customTarget\`, \`medicines\`, \`medicationLog\`.
+Corresponde al array `patients`. Incluye `id`, `name`, `dni`, `socialSecurity`, `gender`, `dateOfBirth`, `diabetesType`, `patientGroup`, `pregnancyStatus`, `pregnancyCategory`, `glucoseUnit`, `customTarget`, `medicines`, `medicationLog`.
 
 ### 8.3 Panel de medicamentos
 
-Corresponde al array \`medicines\`. Es importante que la **dosis predeterminada** y la **hora habitual** estén bien configuradas.
+Corresponde al array `medicines`. Es importante que la **dosis predeterminada** y la **hora habitual** estén bien configuradas.
 
 ### 8.4 Registro de glucemias (records)
 
-Cada registro tiene \`id\`, \`patientId\`, \`profile\`, \`date\`, \`meal\`, \`glucoseBefore\`, \`glucoseAfter\`, \`glucoseNight\`, \`exercise\`, \`comments\`, \`mood\`, \`moods\`, \`weather\`, \`example\`, \`severity\`, \`createdAt\`, \`dietContext\`.
+Cada registro tiene `id`, `patientId`, `profile`, `date`, `meal`, `glucoseBefore`, `glucoseAfter`, `glucoseNight`, `exercise`, `comments`, `mood`, `moods`, `weather`, `example`, `severity`, `createdAt`, `dietContext`.
 
 ### 8.5 Registro de medicación (medicationLog)
 
-Cada entrada tiene \`id\`, \`medId\`, \`nombre\`, \`dosis\`, \`unidad\`, \`fecha\`, \`omitida\`, \`nota\`.
+Cada entrada tiene `id`, `medId`, `nombre`, `dosis`, `unidad`, `fecha`, `omitida`, `nota`.
 
 ### 8.6 Meteorología
 
-Campos: \`temp\`, \`humidity\`, \`precipitation\`, \`pressure\`, \`wind\`, \`date\`, \`location\`.
+Campos: `temp`, `humidity`, `precipitation`, `pressure`, `wind`, `date`, `location`.
 
 ### 8.7 Ejercicio
 
-Campos: \`type\` (walking, cycling, swimming, running, other), \`duration\` (minutos), \`steps\` (opcional).
+Campos: `type` (walking, cycling, swimming, running, other), `duration` (minutos), `steps` (opcional).
 
 ### 8.8 Estado de ánimo
 
-Valores: \`normal\`, \`estresado\`, \`ansioso\`, \`cansado\`, \`fatiga\`.
+Valores: `normal`, `estresado`, `ansioso`, `cansado`, `fatiga`.
 
 ### 8.9 Contexto dietético
 
-Valores: \`plan_recomendado\`, \`comida_familiar\`, \`exceso_cantidad\`, \`alcohol\`, \`salte_comida\`, \`comida_rapida\`, \`restaurante\`, \`evento_especial\`, \`comida_trabajo\`, \`otro_imprevisto\`.
+Valores: `plan_recomendado`, `comida_familiar`, `exceso_cantidad`, `alcohol`, `salte_comida`, `comida_rapida`, `restaurante`, `evento_especial`, `comida_trabajo`, `otro_imprevisto`.
 
 ### 8.10 Severidad
 
@@ -388,29 +395,35 @@ Se muestra como etiqueta de color: gris, verde, amarillo, naranja, rojo, rojo os
 
 ### 8.11 Panel de informes y PDF
 
-Permite elegir rango de fechas, qué incluir, nivel de detalle, orientación, generar el PDF y enviar por correo (adjuntando el JSON).
+El botón **«Imprimir PDF»** (dentro de **«Ver/Imprimir análisis clínico»**) ofrece dos documentos:
+
+- **Versión para el paciente**: resumen corto en lenguaje sencillo (tiempo en rango, barra de colores y unos pocos consejos). **No incluye DNI ni nº de Seguridad Social.**
+- **Informe clínico**: elige las secciones con **«Marcar todas» / «Quitar todas»**. La portada con la advertencia, el aviso médico final y la firma se incluyen **siempre**.
+
+El **análisis clínico avanzado** incluye informe y problemas detectados, adherencia al plan y contexto dietético, influencia del clima y del estado de ánimo, **comparación antes/después** de un cambio de pauta, análisis de correlaciones (descriptivo, no causal) y **presión arterial**. Puedes exportar las estadísticas en JSON.
 
 > Recuerda: **las gráficas y la exportación a PDF necesitan conexión a internet**.
 
 ### 8.12 Exportar Pacientes / Importar Pacientes
 
-- **Exportar Pacientes**: descarga un \`.json\` con todos los pacientes y registros.
-- **Importar Pacientes**: carga un \`.json\`. Puedes elegir entre **fusionar** o **reemplazar**.
+- **Exportar Pacientes**: descarga un `.json` con todos los pacientes y registros.
+- **Importar Pacientes**: carga un `.json`. Puedes elegir entre **fusionar** o **reemplazar**.
+- **Exportar Excel (Paciente actual)**: hoja de cálculo del paciente activo.
 - **Validación**: la app comprueba el esquema antes de cargar.
 
 ---
 
 ## 9. Para profesionales sanitarios: datos de ejemplo (diabetes.json)
 
-El archivo \`diabetes.json\` contiene **cinco pacientes de ejemplo** con **365 registros de glucemia** y **365 registros de medicación** cada uno, cubriendo un año completo (del **17 de septiembre de 2025** al **16 de septiembre de 2026**).
+El archivo `diabetes.json` contiene **cinco pacientes ficticios** con **365 días de registros** cada uno (glucosa, ánimo, ejercicio, contexto dietético, medicación y, en dos casos, presión arterial). **Ninguno es real.** Las fechas se desplazan al cargarlos para que el último día coincida con **hoy**.
 
 ### 9.1 Cómo cargar los datos de ejemplo
 
-Basta con pulsar **"Descargar datos de ejemplo"** en la pantalla inicial de la app. El archivo \`diabetes.json\` **se carga automáticamente**: la app lo lee directamente y **no es necesario buscarlo ni seleccionarlo manualmente** en el dispositivo.
+En la pantalla inicial pulsa **«Soy profesional de la salud» → «Ver datos de ejemplo» → «Sí, cargar los 5 pacientes de ejemplo»**. El archivo `diabetes.json` se carga automáticamente (debe estar junto a la app). Las fechas se ajustan a hoy y los datos se pueden borrar con **«Borrar todo - empezar de nuevo»**.
 
 ### 9.2 Descripción de los cinco pacientes de ejemplo
 
-#### 9.2.1 \`pt_es_sample_t1_01\` — Javier Manuel Ortega Díaz (Vigo)
+#### 9.2.1 `pt_es_sample_t1_01` — Javier Manuel Ortega Díaz (Vigo)
 
 - **Perfil**: varón, 41 años (nacido el 10/04/1985), diabetes tipo 1, adulto, no embarazado.
 - **Medicamento**: Abasaglar (insulina glargina) 100 U/mL, vía subcutánea.
@@ -419,81 +432,230 @@ Basta con pulsar **"Descargar datos de ejemplo"** en la pantalla inicial de la a
   - **24/12/2025**: ajuste a **16 UI**.
 - **Utilidad**: caso **estable con ajuste progresivo de basal**.
 
-#### 9.2.2 \`pt_es_dawn_phenomenon_02\` — Ana Maria Torres Gil (Barcelona)
+#### 9.2.2 `pt_es_dawn_phenomenon_02` — Ana Maria Torres Gil (Barcelona)
 
 - **Perfil**: mujer, 37 años (nacida el 03/11/1988), diabetes tipo 1, adulto, no embarazada.
 - **Pauta**: 14 UI **a las 08:00**.
   - **24/12/2025**: cambio a **17 UI a las 20:30** (fenómeno del alba).
 - **Utilidad**: caso de **fenómeno del alba**.
 
-#### 9.2.3 \`pt_es_poor_adherence_02\` — Carlos Alberto Fernandez Lopez (Madrid)
+#### 9.2.3 `pt_es_poor_adherence_02` — Carlos Alberto Fernandez Lopez (Madrid)
 
 - **Perfil**: varón, 44 años (nacido el 15/03/1982), diabetes tipo 1, adulto, no embarazado.
 - **Pauta**: 16 UI a las 20:00.
   - **21/01/2026**: ajuste a **15 UI** (tras educación diabetológica).
 - **Utilidad**: caso de **mala adherencia**.
 
-#### 9.2.4 \`pt_es_hypo_dose_reduce_02\` — Laura Isabel Mendez Ruiz (Santiago de Compostela)
+#### 9.2.4 `pt_es_hypo_dose_reduce_02` — Laura Isabel Mendez Ruiz (Santiago de Compostela)
 
 - **Perfil**: mujer, 35 años (nacida el 22/07/1990), diabetes tipo 1, adulto, no embarazada.
 - **Pauta**: 18 UI a las 20:00.
   - **10/12/2025**: reducción a **14 UI** por hipoglucemias frecuentes.
 - **Utilidad**: caso de **reducción de dosis por hipoglucemias**.
 
-#### 9.2.5 \`pt_es_exercise_variability_02\` — Pablo Andres Molina Vega (Valencia)
+#### 9.2.5 `pt_es_exercise_variability_02` — Pablo Andres Molina Vega (Valencia)
 
 - **Perfil**: varón, 33 años (nacido el 28/05/1993), diabetes tipo 1, adulto, no embarazado, sexo sin especificar.
 - **Pauta**: 16 UI a las 20:00, con **ajustes puntuales a 14 UI los días de ejercicio intenso**.
 - **Utilidad**: caso de **variabilidad por ejercicio**.
 
+#### Medicación y presión arterial de los casos de ejemplo
+
+- **Carlos** (caso principal para empezar): adherencia muy baja (~33 % de dosis olvidadas); además de insulina toma enalapril, amlodipino y atorvastatina por **hipertensión**, que se mantiene mal controlada. Tiene registros de **presión arterial**.
+- **Ana**: además de insulina toma Eutirox; tras varios meses con presión normal-alta se diagnostica hipertensión y empieza Losartán con buena respuesta. Tiene registros de **presión arterial**.
+- **Javier**: atorvastatina; presión normal. **Laura**: anticonceptivo oral combinado; presión normal. **Pablo**: ibuprofeno ocasional; presión normal con pulso bajo en reposo.
+
 ### 9.3 Opciones que conviene probar en los informes PDF
 
-1. **Informe de 7 días** (\`pt_es_sample_t1_01\`, resumen ejecutivo).
+1. **Informe de 7 días** (`pt_es_sample_t1_01`, resumen ejecutivo).
 2. **Informe de 30 días** (cualquiera, informe estándar).
-3. **Informe de 90 días** (\`pt_es_dawn_phenomenon_02\`, informe completo).
-4. **Informe de 365 días** (\`pt_es_hypo_dose_reduce_02\`, informe completo).
-5. **Informe centrado en hipoglucemias** (\`pt_es_hypo_dose_reduce_02\`, 180 días).
-6. **Informe centrado en adherencia** (\`pt_es_poor_adherence_02\`, 365 días).
-7. **Informe centrado en ejercicio** (\`pt_es_exercise_variability_02\`, 90 días).
+3. **Informe de 90 días** (`pt_es_dawn_phenomenon_02`, informe completo).
+4. **Informe de 365 días** (`pt_es_hypo_dose_reduce_02`, informe completo).
+5. **Informe centrado en hipoglucemias** (`pt_es_hypo_dose_reduce_02`, 180 días).
+6. **Informe centrado en adherencia** (`pt_es_poor_adherence_02`, 365 días).
+7. **Informe centrado en ejercicio** (`pt_es_exercise_variability_02`, 90 días).
 8. **Informe comparativo** (varios pacientes, 30 días, resumen).
 9. **Informe con orientación horizontal** (cualquiera, 30 días, completo).
-10. **Informe con rango personalizado** (\`pt_es_dawn_phenomenon_02\`, 10/12/2025–10/01/2026).
+10. **Informe con rango personalizado** (`pt_es_dawn_phenomenon_02`, 10/12/2025–10/01/2026).
 
 ### 9.4 Guion de demostración sugerido
 
-1. **Minuto 0–1**: abrir la app, mostrar la pantalla inicial con las dos opciones.
-2. **Minuto 1–2**: pulsar **"Descargar datos de ejemplo"** (carga automática).
+1. **Minuto 0–1**: abrir la app y mostrar la pantalla «Antes de empezar».
+2. **Minuto 1–2**: elegir **«Soy profesional de la salud» → «Ver datos de ejemplo»** y cargar los 5 pacientes.
 3. **Minuto 2–3**: mostrar el paciente activo y sus registros.
 4. **Minuto 3–4**: generar un **informe de 30 días**.
-5. **Minuto 4–5**: generar un **informe de 90 días** de \`pt_es_dawn_phenomenon_02\`.
-6. **Minuto 5–6**: generar un **informe de 365 días** de \`pt_es_hypo_dose_reduce_02\`.
-7. **Minuto 6–7**: usar **"Enviar por correo"**.
+5. **Minuto 4–5**: generar un **informe de 90 días** de `pt_es_dawn_phenomenon_02`.
+6. **Minuto 5–6**: generar un **informe de 365 días** de `pt_es_hypo_dose_reduce_02`.
+7. **Minuto 6–7**: usar **"Enviar por email"** y, si hay otro equipo, probar una **videollamada** (§10).
 8. **Minuto 7–8**: mostrar **Exportar Pacientes** e **Importar Pacientes**.
 9. **Minuto 8–9**: generar un **informe comparativo**.
 10. **Minuto 9–10**: cerrar con la idea de flexibilidad y recordar el aviso legal.
 
 ---
 
-## 10. Privacidad, seguridad y cumplimiento
+## 10. Videollamada con el profesional sanitario
 
-- **Los datos no salen del dispositivo** salvo que tú decidas enviarlos por correo.
-- **No hay cuentas ni contraseñas**.
-- **Cifrado**: la app no cifra los datos. Usa el cifrado de disco del sistema operativo.
-- **Recomendaciones**: exporta **semanalmente**, no compartas el \`.json\` por canales inseguros, revisa los campos antes de enviar, cumple con el RGPD y la LOPDGDD.
+La app incluye una **videoconsulta entre médico y paciente** con vídeo, audio, **chat** y **pantalla compartida**. Además, el paciente puede **compartir sus datos** con el médico durante la llamada, de forma cifrada y solo con su consentimiento. Se abre con el botón **📹 Videollamada** de la cabecera (junto a **✉️ Enviar por email**).
+
+> **Resumen en cuatro ideas**
+> 1. **Nada se comparte sin tu permiso.** Puedes estar en la llamada sin compartir ningún dato.
+> 2. **Permiso 1 — VER:** si aceptas compartir, el médico ve tus datos como una **ficha temporal** mientras dure la llamada. Se elimina al salir.
+> 3. **Permiso 2 — GUARDAR:** solo si tú lo autorizas después, con un consentimiento informado y una doble confirmación, el médico podrá **guardar una copia** en sus registros.
+> 4. **Los datos viajan cifrados.** El tratamiento posterior depende del profesional o de la clínica (§10.4).
+
+### 10.1 Qué necesitas antes de empezar
+
+- **Nombre de la sala**: te lo da tu médico o tu clínica (mayúsculas y números; hasta 12 caracteres). Pídelo por un **canal fiable** y **no lo compartas** con nadie más: además de identificar la llamada, es la **clave que cifra tus datos** (§10.3).
+- **Tu nombre guardado en la ficha del paciente** (pulsa **«Guardar datos»**). Sin nombre, la app no te dejará compartir datos.
+- **Conexión a internet**, **cámara y micrófono** con permisos concedidos, y la app abierta por **HTTPS**.
+- Un navegador actual (Chrome, Edge, Firefox o Safari, como en §3).
+
+### 10.2 Cómo usarla como paciente (paso a paso)
+
+1. Pulsa **📹 Videollamada**. Se abre la pantalla de la videoconsulta. Deja seleccionado el rol de **paciente** (es el rol por defecto).
+2. Pulsa **«Activar cámara y micrófono»** y **permite** el acceso cuando el navegador te lo pida. Puedes elegir cámara y micrófono en los selectores.
+3. Escribe el **nombre de la sala** que te dio tu médico y pulsa **«Entrar»**. Si el médico **aún no ha abierto la sala**, verás una pantalla de espera y la llamada **se conectará sola** cuando la abra.
+4. **Al conectarte** aparece el aviso **«Compartir mis datos con el médico»**, con tu nombre. Léelo y elige:
+   - **«Acepto y comparto mis datos»** → se envían cifrados (**Permiso 1: ver**).
+   - **«No compartir (seguir en la llamada)»** → la llamada continúa sin enviar nada. Puedes cambiar de idea más tarde con el botón **«Compartir mis datos»** de la barra superior.
+   - Casilla opcional: **«Incluir también mi DNI y mi nº de Seguridad Social»**. **Por defecto no se envían.** Márcala solo si tu médico lo necesita.
+5. Qué se envía: **perfil clínico, registros de glucosa, medicación y, si la usas, presión arterial.** La barra superior confirmará: *«✓ Datos enviados cifrados al médico. El médico solo puede verlos durante la llamada.»*
+6. Durante la llamada puedes usar el **chat**, **silenciar** el micrófono, **cambiar de cámara** y **compartir pantalla**.
+7. **(Opcional) Permitir que el médico guarde tus datos.** Cuando el médico ya ha recibido tus datos aparece el botón **«Permitir que el médico guarde mis datos»** (ver §10.4). No es obligatorio y puedes ignorarlo.
+8. Para terminar pulsa **«✕ Cerrar»** (o **«Salir»** dentro de la llamada).
+
+### 10.3 Cómo se mantienen seguros los datos
+
+| Elemento | Protección |
+|---|---|
+| **Vídeo y audio** | Conexión directa entre los dos equipos (WebRTC), **cifrada por defecto**. Si un cortafuegos lo impide, la app prueba automáticamente servidores de relevo, que solo reenvían tráfico ya cifrado. |
+| **Datos del paciente** | Se **cifran en tu equipo antes de enviarse** con **AES-256-GCM** (confidencialidad + detección de manipulación). La clave se deriva del **nombre de la sala** con PBKDF2-SHA256 (250.000 iteraciones, sal e IV aleatorios), y los datos se comprimen antes de cifrar. Solo se descifran en el equipo del médico. |
+| **Quién puede ser médico** | Solo los médicos dados de alta por el administrador del sistema (§11), con usuario y contraseña. Tras 3 fallos hay un tiempo de espera. El rol de médico **no se recuerda**: se pide siempre la contraseña. |
+| **Datos de identificación** | **DNI y nº de Seguridad Social no se envían** salvo que el paciente marque la casilla opcional. |
+| **Lo que ve el médico** | Una **ficha temporal** (🩺, aviso amarillo): **no se guarda** en el equipo del médico, **no se puede exportar** como copia de seguridad ni incluir en exportaciones y **se elimina al salir** de la videollamada. |
+| **Protección ante pérdidas** | Si el médico cierra o recarga la página con una ficha temporal abierta, el navegador pide confirmación. |
+| **Integridad** | Si el nombre de sala no coincide o los datos se han alterado, **no se pueden descifrar** y la app lo indica. |
+| **Guardado** | Nunca ocurre sin el **Permiso 2** del paciente (§10.4). |
+
+**Límites que conviene conocer (sé consciente de ellos):**
+
+- **La clave es el nombre de la sala.** Una sala fácil de adivinar (p. ej. `CONSULTA1`) protege menos. **Los médicos deben usar un código aleatorio** (la app lo genera si dejan el nombre en blanco), no reutilizarlo con otros pacientes y enviárselo al paciente por un canal fiable.
+- **Comprueba que hablas con tu médico** antes de aceptar compartir. El cifrado protege el envío, no la identidad de quien está al otro lado.
+- La conexión se establece con **servicios públicos de terceros** (servidor de señalización y servidores de ayuda a la conexión). Estos no reciben tus datos clínicos en claro, pero pueden ver datos técnicos de la conexión (como la dirección IP y el nombre técnico de la sala). La clínica puede configurar su propio servidor en los ajustes avanzados de la videollamada.
+- La app **no cifra** los datos guardados en el navegador (§12).
+- El cifrado no sustituye el cumplimiento del **RGPD** por parte de la clínica.
+
+### 10.4 Los dos permisos: VER primero, GUARDAR después
+
+| | **Permiso 1: VER** | **Permiso 2: GUARDAR** |
+|---|---|---|
+| **Cuándo** | Al conectarte (o con **«Compartir mis datos»**) | Después de haber compartido los datos |
+| **Qué permite** | Que el médico **vea** tus datos durante la llamada | Que el médico **guarde una copia** en sus registros de pacientes |
+| **Cómo se da** | Un clic: **«Acepto y comparto mis datos»** | **Consentimiento informado** con casilla + **segunda confirmación** |
+| **Cuánto dura** | Hasta que salgas de la llamada | Hasta que lo retires |
+| **Si no se da** | Sigues en la llamada sin compartir nada | El médico solo ve la ficha temporal, que se borra al salir |
+
+**Cómo se da el permiso de guardado:**
+
+1. Tras compartir tus datos, pulsa **«Permitir que el médico guarde mis datos»** (barra superior).
+2. Se abre el **consentimiento informado**, que explica:
+   - **Qué se guardaría:** lo que acabas de compartir (perfil clínico, glucosa, medicación y presión arterial si la usas). DNI y nº de Seguridad Social solo si los marcaste.
+   - **Para qué:** el seguimiento clínico de tu diabetes y tu historial de atención.
+   - **Dónde y quién:** en el **almacenamiento local del navegador del equipo del médico**. El profesional o la clínica será el **responsable del tratamiento**. Pregúntale su identidad, contacto y plazo de conservación.
+   - **Tus derechos:** acceso, rectificación, supresión, limitación, portabilidad y **retirar el consentimiento en cualquier momento** sin que afecte a tu atención. Puedes reclamar ante la **Agencia Española de Protección de Datos (aepd.es)**.
+   - **Es voluntario:** puedes negarte y seguir con la consulta.
+3. Marca la casilla **«He leído y comprendo esta información y autorizo expresamente…»** y pulsa **«Aceptar y continuar»** (hasta que no marques la casilla el botón está desactivado).
+4. Aparece una **confirmación final**: **«Sí, autorizo»** o **«No, volver»**.
+5. La autorización se envía al médico. Verás *«Autorización enviada. Esperando la respuesta del médico…»*.
+6. **El médico decide si guarda la ficha.** Tú verás el resultado: *«✓ El médico ha guardado tus datos en su ficha de pacientes»* o *«El médico no ha guardado tus datos. Solo los ha visto durante la llamada.»* (en ese caso puedes volver a darle el permiso si quieres).
+
+**Cómo retirar el permiso:** la app del paciente **no tiene un botón para borrar la copia** que ya está en el sistema del médico. Para retirarlo (o pedir acceso, rectificación o supresión), **dirígete al profesional o a la clínica**; ellos deben atender tu solicitud.
+
+### 10.5 Cómo usarla como profesional sanitario
+
+1. Pulsa **📹 Videollamada** y elige el rol **Médico**. Selecciona tu **usuario** de la lista y escribe tu **contraseña** (facilitados por el administrador del sistema, §11). Puedes marcar **«Guardar la contraseña en este equipo»** (**solo en un equipo personal**).
+2. **Crea la sala.** El nombre debe tener **al menos 6 letras o números**; si lo dejas en blanco, la app genera un **código aleatorio** (más seguro). Puedes guardar salas habituales con **«Salas…»**. Envía el nombre al paciente **por un canal fiable**.
+3. Espera al paciente. Si entra antes de que abras la sala, se conectará solo cuando la abras.
+4. Cuando el paciente comparta sus datos aparece su **ficha temporal** (marcada con 🩺 y un **aviso amarillo**). Puedes consultarla como cualquier otro paciente (registros, análisis, informes), pero **no se guarda, no se exporta y se elimina al salir**.
+5. Si el paciente **autoriza el guardado**, aparece el aviso **«El paciente autoriza guardar sus datos»**:
+   - **«Guardar en mis pacientes»**: la ficha se guarda **en el almacenamiento local de este navegador, junto con la fecha del consentimiento** (y tu usuario). Haz copias de seguridad con regularidad (§2.5); la capacidad se explica en §3.3. Si ya tienes un paciente con el mismo DNI (o mismo nombre y fecha de nacimiento), la app **pregunta si quieres sobrescribirlo**.
+   - **«No guardar»**: la ficha sigue siendo temporal.
+6. Al salir con una ficha temporal abierta, la app pide confirmación porque se eliminará.
+
+> **Responsabilidad del profesional:** al guardar la ficha te conviertes en **responsable del tratamiento** de esos datos (RGPD). Comunica al paciente tu identidad, el plazo de conservación y cómo ejercer sus derechos, y conserva el registro del consentimiento.
+
+### 10.6 Problemas habituales con cámara y micrófono
+
+Si ves **«No podemos acceder al micrófono o la cámara»**, el navegador no tiene permiso. Pulsa **«Show me how to fix it»** o sigue estos pasos:
+
+- **iPhone / iPad:** Ajustes → Safari → Cámara y Micrófono → **Permitir**.
+- **Android:** Ajustes → Aplicaciones → tu navegador → Permisos → permitir **Cámara** y **Micrófono**.
+- **Ordenador:** haz clic en el icono del candado junto a la dirección y permite **Cámara** y **Micrófono**.
+
+Después, **reinicia el navegador por completo**. Si la llamada no conecta, prueba con otra red (por ejemplo, datos móviles) o avisa a la clínica: puede configurar un servidor de relevo propio.
+
+### 10.7 Avisos importantes
+
+- La videoconsulta y el envío de datos **no sustituyen la atención presencial ni los servicios de urgencias**. **En caso de urgencia, llama al 112.**
+- Compartes tus datos **de forma voluntaria** y puedes negarte sin perder la llamada.
+- La app ofrece información de apoyo y **no emite diagnósticos**.
+- Los textos de consentimiento de la app son informativos: **la clínica o el profesional responsable debe revisarlos y adaptarlos** antes de usarlos con pacientes reales.
 
 ---
 
-## 11. Preguntas frecuentes (FAQ)
+## 11. Alta de médicos y ajustes de la clínica
+
+**El administrador del sistema** (la persona que instala y mantiene la app para la clínica) es quien **da de alta a los médicos** que pueden crear salas de videollamada. Cada médico recibe de él un **usuario y una contraseña**.
+
+- Si eres **profesional sanitario** y no puedes entrar como médico, **solicita el alta (o el cambio de contraseña) a tu administrador del sistema**.
+- Los **pacientes no necesitan usuario ni contraseña**: solo el nombre de la sala que les da su médico.
+- Usa una contraseña que **no utilices en ningún otro servicio** y no la compartas.
+
+> **Para la clínica:** el nombre y los datos de contacto que aparecen en la cabecera de la app son marcadores de ejemplo (*«Nombre de su clínica»*, teléfono y email) que **deben sustituirse** por los reales antes de entregar la app a pacientes.
+
+---
+
+## 12. Privacidad, seguridad y cumplimiento
+
+- **Los datos no salen del dispositivo** salvo que tú decidas enviarlos: por **email** (archivo JSON que tú adjuntas y envías) o por **videollamada** (cifrados, con tu consentimiento expreso; ver §10).
+- **Cuentas y contraseñas:** los pacientes no necesitan cuenta ni contraseña. Solo los **médicos** que crean salas de videollamada usan usuario y contraseña, facilitados por el administrador del sistema (ver §11).
+- **Cifrado en reposo:** la app **no cifra** la base de datos guardada en el navegador. Usa el cifrado de disco del sistema operativo y no uses equipos compartidos. Para borrar todo, usa **«Borrar todo - empezar de nuevo»** o borra los datos del sitio en el navegador.
+- **Cifrado en la videollamada:** los datos del paciente se cifran con AES-256-GCM antes de enviarse; el vídeo y el audio van cifrados por WebRTC. Detalles y límites en §10.5.
+- **Ficha temporal:** lo que recibe el médico por videollamada no se guarda y se elimina al salir, salvo que el paciente dé un segundo permiso expreso.
+- **Servicios de terceros:** la meteorología (Open-Meteo), las librerías de gráficas y PDF, y la conexión de la videollamada (servidor de señalización y servidores STUN/TURN) dependen de servicios externos. Ninguno recibe tus registros médicos en claro.
+- **Recomendaciones:** exporta **semanalmente**, no compartas el `.json` por canales inseguros, revisa los campos antes de enviar y cumple con el RGPD y la LOPDGDD. **La clínica o el profesional responsable del tratamiento debe revisar y adaptar los textos de consentimiento** antes de usarlos con pacientes reales.
+
+---
+
+## 13. Preguntas frecuentes (FAQ)
 
 **¿Necesito internet para usar la app?** Sí, para las gráficas, la exportación a PDF y la meteorología.
 
 **¿Puedo usar la app en varios dispositivos?** Sí, pero no se sincronizan automáticamente.
 
+**¿Puede mi médico ver mis datos durante la videollamada?** Solo si pulsas «Acepto y comparto mis datos». Puedes negarte y seguir en la llamada.
+
+**¿El médico se queda con mis datos al terminar la llamada?** No. Los ve como ficha temporal que se elimina al salir. Solo podrá guardarlos si le das un segundo permiso expreso (§10.4).
+
+**¿Puedo retirar el permiso de guardado?** Sí, en cualquier momento, pidiéndoselo al profesional o a la clínica (RGPD).
+
+**¿Se envían mi DNI y mi nº de Seguridad Social?** No por defecto; solo si marcas la casilla opcional al compartir.
+
+**¿Qué hago si mi médico no abre la sala?** Espera: la llamada se conectará sola cuando la abra.
+
+**¿Cómo registro la presión arterial?** Activa «Monitorizar presión arterial» en el perfil clínico.
+
 **¿Qué pasa si borro los datos del navegador?** Se pierden. Exporta semanalmente.
 
 **¿Puedo cambiar de mg/dL a mmol/L?** Sí, la app convierte automáticamente.
 
-**¿Puedo tener varios pacientes?** Sí.
+**¿Puedo tener varios pacientes?** Sí. Todos se guardan en la base de datos de este navegador; caben decenas de pacientes con un año de datos (§3.3).
+
+**¿Cuántos registros caben?** Muchos: unos 5 pacientes con un año de datos ocupan unos 5 MB y el navegador suele admitir cientos de MB (§3.3). Exporta y archiva los años antiguos.
+
+**¿Mis copias de seguridad antiguas en JSON siguen sirviendo?** Sí. Impórtalas con **Importar Pacientes** o **Importar paciente**: la app acepta el formato de versiones anteriores.
+
+**¿Se perdieron mis datos al actualizar la app?** No: los datos de la versión anterior se trasladan solos a la nueva base de datos la primera vez que abres la app (§3.3). Aun así, es buena idea exportar una copia antes de actualizar.
 
 **¿Puedo registrar solo la insulina?** Sí.
 
@@ -517,14 +679,18 @@ Basta con pulsar **"Descargar datos de ejemplo"** en la pantalla inicial de la a
 
 **¿Se registra la categoría de embarazo (trimestre)?** No, la app no la registra.
 
+**¿Cómo cambio entre tema claro y oscuro?** Con el selector «Tema» de la cabecera.
+
 ---
 
-## 12. Solución de problemas
+## 14. Solución de problemas
 
 | Problema | Causa probable | Solución |
 |---|---|---|
 | La app no carga | JavaScript desactivado o navegador antiguo | Activa JavaScript o actualiza el navegador |
-| No se guardan los datos | Modo incógnito o almacenamiento lleno | Sal del modo incógnito o libera espacio |
+| No se guardan los datos | Modo incógnito/privado o dispositivo sin espacio | Sal del modo privado, libera espacio en el dispositivo y exporta una copia de seguridad |
+| Aviso «No se pudo iniciar la base de datos del navegador» | El navegador no permite WebAssembly o IndexedDB (a veces en modo privado) | Usa un navegador actual fuera del modo privado. Mientras tanto la app funciona con el almacenamiento básico |
+| Banda roja «Los datos se han modificado en otra pestaña» | Hay otra pestaña o ventana de la app abierta que ha guardado cambios | Cierra las demás pestañas y pulsa **Recargar** |
 | No aparecen las gráficas | Sin conexión a internet | Conéctate y recarga |
 | No se genera el PDF | Sin conexión a internet | Conéctate y vuelve a intentarlo |
 | No aparece la meteorología | Sin ubicación configurada o sin conexión | Configura la ubicación y comprueba la conexión |
@@ -532,11 +698,16 @@ Basta con pulsar **"Descargar datos de ejemplo"** en la pantalla inicial de la a
 | La importación falla | Archivo corrupto o esquema incompatible | Comprueba el JSON |
 | Las gráficas salen vacías | No hay datos en el rango seleccionado | Amplía el rango de fechas |
 | Los valores se ven en otra unidad | Cambio de mg/dL a mmol/L | La app convierte automáticamente |
+| La videollamada no pide cámara/micrófono o dice que no puede acceder | Permisos del navegador denegados | Permite cámara y micrófono en los ajustes del navegador/sistema y reinicia el navegador (ver §10.6) |
+| La videollamada no conecta | Cortafuegos o red restrictiva | La app prueba automáticamente conexiones de relevo; prueba otra red (datos móviles) o avisa a la clínica |
+| «No se pudieron abrir los datos recibidos» (médico) | Nombre de sala distinto o datos alterados | Comprobad que ambos usáis el mismo nombre de sala y que el paciente vuelva a pulsar «Compartir mis datos» |
+| No aparece «Compartir mis datos» | Falta el nombre del paciente o no hay conexión con el médico | Escribe tu nombre, pulsa «Guardar datos» y espera a que conecte el médico |
+| El médico no puede entrar | Usuario/contraseña incorrectos o médico no dado de alta | Comprueba los datos o solicita el alta al administrador del sistema (§11); tras 3 fallos hay una espera |
 | No encuentro el JSON exportado | Se guarda en el directorio de descargas por defecto | Busca en la carpeta **Descargas** |
 
 ---
 
-## 13. Glosario
+## 15. Glosario
 
 - **Basal**: insulina de acción prolongada.
 - **Bolo**: insulina de acción rápida antes de las comidas.
@@ -547,14 +718,20 @@ Basta con pulsar **"Descargar datos de ejemplo"** en la pantalla inicial de la a
 - **mg/dL**: miligramos por decilitro.
 - **mmol/L**: milimoles por litro.
 - **UI**: unidad internacional de insulina.
+- **Ficha temporal**: copia de los datos de un paciente que el médico ve durante la videollamada y que se elimina al salir.
+- **Sala**: nombre de la videollamada; además es la clave que cifra los datos del paciente.
+- **WebRTC**: tecnología del navegador que permite la videollamada directa entre dos equipos.
+- **STUN/TURN**: servidores auxiliares que ayudan a conectar la llamada cuando hay cortafuegos.
+- **RGPD / LOPDGDD**: normativa europea y española de protección de datos.
+- **ESC/ESH**: guías europeas de clasificación de la presión arterial.
 - **CIMA**: Centro de Información online de Medicamentos de la AEMPS.
-- **NUSS**: Número de afiliación a la Seguridad Social. Formato español: 12 dígitos, habitualmente con barras y guiones: \`28/12345678-90\`.
+- **NUSS**: Número de afiliación a la Seguridad Social. Formato español: 12 dígitos, habitualmente con barras y guiones: `28/12345678-90`.
 
 ---
 
-## 14. Anexo A: esquema del archivo JSON
+## 16. Anexo A: esquema del archivo JSON
 
-\`\`\`jsonc
+```jsonc
 {
   "patients": [
     {
@@ -575,34 +752,58 @@ Basta con pulsar **"Descargar datos de ejemplo"** en la pantalla inicial de la a
     }
   ],
   "currentPatientId": "string",
-  "records": [ /* ... */ ]
+  "records": [ /* ... */ ],
+  "bpRecords": [ /* presión arterial: fecha, hora, sistólica, diastólica, pulso, notas */ ]
 }
-\`\`\`
+```
+
+Una ficha guardada tras una videollamada incluye además `consentSaved`: `{ grantedAt, savedAt, via: "videoconsulta", version, doctor }` (fecha del consentimiento del paciente, fecha de guardado y usuario médico).
 
 ---
 
-## 15. Anexo B: valores admitidos en campos cerrados
+## 17. Anexo B: valores admitidos en campos cerrados
 
-**\`meal\`**: \`breakfast\`, \`lunch\`, \`dinner\`, \`snack\`, \`other\`.
+**`meal`**: `breakfast`, `lunch`, `dinner`, `snack`, `other`.
 
-**\`exercise.type\`**: \`walking\`, \`cycling\`, \`swimming\`, \`running\`, \`other\`.
+**`exercise.type`**: `walking`, `cycling`, `swimming`, `running`, `other`.
 
-**\`moods\`**: \`normal\`, \`estresado\`, \`ansioso\`, \`cansado\`, \`fatiga\`.
+**`moods`**: `normal`, `estresado`, `ansioso`, `cansado`, `fatiga`.
 
-**\`dietContext\`**: \`plan_recomendado\`, \`comida_familiar\`, \`exceso_cantidad\`, \`alcohol\`, \`salte_comida\`, \`comida_rapida\`, \`restaurante\`, \`evento_especial\`, \`comida_trabajo\`, \`otro_imprevisto\`.
+**`dietContext`**: `plan_recomendado`, `comida_familiar`, `exceso_cantidad`, `alcohol`, `salte_comida`, `comida_rapida`, `restaurante`, `evento_especial`, `comida_trabajo`, `otro_imprevisto`.
 
-**\`severity\`**: \`null\`, \`mild\`, \`moderate\`, \`urgent\`, \`emergency\`, \`severe\`.
+**`severity`**: `null`, `mild`, `moderate`, `urgent`, `emergency`, `severe`.
 
-**\`gender\`**: \`male\`, \`female\`, \`unspecified\`.
+**`gender`**: `male`, `female`, `unspecified`.
 
-**\`diabetesType\`**: \`type1\`, \`type2\`, \`gestational\`.
+**`diabetesType`**: `type1`, `type2`, `gestational`.
 
-**\`patientGroup\`**: \`adult\`, \`child_adolescent\`, \`pregnancy\`.
+**`patientGroup`**: `adult`, `child_adolescent`, `pregnancy`.
 
-**\`pregnancyStatus\`**: \`not_pregnant\`, \`pregnant\`, \`lactation\`, \`postpartum\`.
+**`pregnancyStatus`**: `not_pregnant`, `pregnant`, `lactation`, `postpartum`.
 
-**\`glucoseUnit\`**: \`mgdl\`, \`mmoll\`.
+**`glucoseUnit`**: `mgdl`, `mmoll`.
+
 
 ---
 
-*Fin del README. Recuerda: la app no diagnostica ni recomienda tratamientos; solo un profesional sanitario puede hacerlo. Consulta con tu equipo de diabetes la frecuencia de tus revisiones y contacta con tu clínica si necesitas corregir algún dato.*
+## 18. Anexo C: estructura de la base de datos (SQLite)
+
+Para quien mantiene la app. La base se guarda en IndexedDB (base `glucosa-diario`, clave `sqlite`) como un archivo SQLite. Cada fila tiene columnas consultables con SQL y una columna `data` con el objeto completo en JSON, de modo que **no se pierde ningún campo** al guardar y leer.
+
+| Tabla | Columnas consultables |
+|---|---|
+| `patients` | `id`, `seq`, `name`, `dni`, `date_of_birth`, `diabetes_type`, `data` |
+| `records` (mediciones) | `id`, `seq`, `patient_id`, `date`, `meal`, `glucose_before`, `glucose_after`, `glucose_night`, `severity`, `data` |
+| `bp_records` (presión arterial) | `id`, `seq`, `patient_id`, `date`, `time`, `systolic`, `diastolic`, `pulse`, `data` |
+| `medication_log` | `key`, `seq`, `patient_id`, `med_id`, `fecha`, `omitida`, `data` |
+| `weather_cache` | `key`, `data` |
+| `meta` | `key`, `value` (`schema_version`, `currentPatientId`) |
+
+- `seq` conserva el **orden** de cada lista. Hay índices por paciente y fecha.
+- **Las fichas temporales de la videollamada nunca se escriben** en la base de datos.
+- Las preferencias pequeñas (tema, ubicación, opciones de PDF) siguen en el almacenamiento normal del navegador, no en la base.
+- La importación y exportación en **JSON** no cambian: el JSON sigue siendo el formato de intercambio y de copia de seguridad.
+
+---
+
+*Fin del README. Recuerda: la app no diagnostica ni recomienda tratamientos; solo un profesional sanitario puede hacerlo. Consulta con tu equipo de diabetes la frecuencia de tus revisiones y contacta con tu clínica si necesitas corregir algún dato. La videollamada no sustituye la atención presencial ni las urgencias: ante una urgencia, llama al 112.*
