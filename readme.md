@@ -28,7 +28,7 @@
 8. [Explicación detallada de cada sección](#8-explicación-detallada-de-cada-sección)
 9. [Para profesionales sanitarios: datos de ejemplo](#9-para-profesionales-sanitarios-datos-de-ejemplo-diabetesjson)
 10. [Videollamada con el profesional sanitario](#10-videollamada-con-el-profesional-sanitario)
-11. [Configuración de la clínica (config.ini)](#11-configuración-de-la-clínica-configini)
+11. [Alta de médicos y ajustes de la clínica](#11-alta-de-médicos-y-ajustes-de-la-clínica)
 12. [Privacidad, seguridad y cumplimiento](#12-privacidad-seguridad-y-cumplimiento)
 13. [Preguntas frecuentes (FAQ)](#13-preguntas-frecuentes-faq)
 14. [Solución de problemas](#14-solución-de-problemas)
@@ -518,7 +518,7 @@ La app incluye una **videoconsulta entre médico y paciente** con vídeo, audio,
 |---|---|
 | **Vídeo y audio** | Conexión directa entre los dos equipos (WebRTC), **cifrada por defecto**. Si un cortafuegos lo impide, la app prueba automáticamente servidores de relevo, que solo reenvían tráfico ya cifrado. |
 | **Datos del paciente** | Se **cifran en tu equipo antes de enviarse** con **AES-256-GCM** (confidencialidad + detección de manipulación). La clave se deriva del **nombre de la sala** con PBKDF2-SHA256 (250.000 iteraciones, sal e IV aleatorios), y los datos se comprimen antes de cifrar. Solo se descifran en el equipo del médico. |
-| **Quién puede ser médico** | Solo quien tenga usuario y contraseña en `config.ini` (§11). Tras 3 fallos hay un tiempo de espera. El rol de médico **no se recuerda**: se pide siempre la contraseña. |
+| **Quién puede ser médico** | Solo los médicos dados de alta por el administrador del sistema (§11), con usuario y contraseña. Tras 3 fallos hay un tiempo de espera. El rol de médico **no se recuerda**: se pide siempre la contraseña. |
 | **Datos de identificación** | **DNI y nº de Seguridad Social no se envían** salvo que el paciente marque la casilla opcional. |
 | **Lo que ve el médico** | Una **ficha temporal** (🩺, aviso amarillo): **no se guarda** en el equipo ni en el servidor, **no se puede exportar** como copia de seguridad ni incluir en exportaciones y **se elimina al salir** de la videollamada. |
 | **Protección ante pérdidas** | Si el médico cierra o recarga la página con una ficha temporal abierta, el navegador pide confirmación. |
@@ -561,7 +561,7 @@ La app incluye una **videoconsulta entre médico y paciente** con vídeo, audio,
 
 ### 10.5 Cómo usarla como profesional sanitario
 
-1. Pulsa **📹 Videollamada** y elige el rol **Médico**. Selecciona tu **usuario** de la lista y escribe tu **contraseña** (definidos en `config.ini`, §11). Puedes marcar **«Guardar la contraseña en este equipo»** (**solo en un equipo personal**).
+1. Pulsa **📹 Videollamada** y elige el rol **Médico**. Selecciona tu **usuario** de la lista y escribe tu **contraseña** (facilitados por el administrador del sistema, §11). Puedes marcar **«Guardar la contraseña en este equipo»** (**solo en un equipo personal**).
 2. **Crea la sala.** El nombre debe tener **al menos 6 letras o números**; si lo dejas en blanco, la app genera un **código aleatorio** (más seguro). Puedes guardar salas habituales con **«Salas…»**. Envía el nombre al paciente **por un canal fiable**.
 3. Espera al paciente. Si entra antes de que abras la sala, se conectará solo cuando la abras.
 4. Cuando el paciente comparta sus datos aparece su **ficha temporal** (marcada con 🩺 y un **aviso amarillo**). Puedes consultarla como cualquier otro paciente (registros, análisis, informes), pero **no se guarda, no se exporta y se elimina al salir**.
@@ -591,37 +591,22 @@ Después, **reinicia el navegador por completo**. Si la llamada no conecta, prue
 
 ---
 
-## 11. Configuración de la clínica (config.ini)
+## 11. Alta de médicos y ajustes de la clínica
 
-Junto a la app puede haber un archivo de texto **`config.ini`**. La clínica lo usa para definir quién puede actuar como médico en la videollamada y para algunos ajustes de arranque. Ejemplo:
+**El administrador del sistema** (la persona que instala y mantiene la app para la clínica) es quien **da de alta a los médicos** que pueden crear salas de videollamada. Cada médico recibe de él un **usuario y una contraseña**.
 
-```ini
-[General]
-EmptyStorage = false
-SaveOnServer = false
-zip = false
+- Si eres **profesional sanitario** y no puedes entrar como médico, **solicita el alta (o el cambio de contraseña) a tu administrador del sistema**.
+- Los **pacientes no necesitan usuario ni contraseña**: solo el nombre de la sala que les da su médico.
+- Usa una contraseña que **no utilices en ningún otro servicio** y no la compartas.
 
-[AuthorizedUsers]
-dra.garcia = una-contraseña-larga
-dr.lopez = otra-contraseña-larga
-```
-
-| Ajuste | Qué hace |
-|---|---|
-| `[AuthorizedUsers]` | Lista `usuario = contraseña`. Son los **médicos que pueden crear salas** de videollamada. En la app se elige el usuario y se escribe su contraseña. |
-| `EmptyStorage = true` | Al abrir la app **borra todo el almacenamiento local del navegador** y reinicia (una vez por sesión). **Vuelve a ponerlo en `false` después de usarlo**, o se perderán datos. |
-| `SaveOnServer`, `zip` | Se leen, pero la app se aloja como **página estática** y **no puede guardar datos en el servidor**: los datos siguen en el navegador. |
-
-> **⚠️ Advertencia de seguridad:** `config.ini` es un **archivo público**: **cualquiera que conozca su dirección puede leer las contraseñas**. Úsalo solo si lo aceptas, con contraseñas **que no uses en ningún otro sitio** y sin información sensible. Si no hay `config.ini`, no se podrá entrar como médico.
-
-> **Para profesionales:** el nombre y los datos de contacto de la clínica que aparecen en la cabecera son marcadores de ejemplo (*«Nombre de su clínica»*, teléfono y email) que **deben sustituirse** por los reales antes de entregar la app a pacientes.
+> **Para la clínica:** el nombre y los datos de contacto que aparecen en la cabecera de la app son marcadores de ejemplo (*«Nombre de su clínica»*, teléfono y email) que **deben sustituirse** por los reales antes de entregar la app a pacientes.
 
 ---
 
 ## 12. Privacidad, seguridad y cumplimiento
 
 - **Los datos no salen del dispositivo** salvo que tú decidas enviarlos: por **email** (archivo JSON que tú adjuntas y envías) o por **videollamada** (cifrados, con tu consentimiento expreso; ver §10).
-- **Cuentas y contraseñas:** los pacientes no necesitan cuenta ni contraseña. Solo los **médicos** que crean salas de videollamada usan usuario y contraseña, definidos en `config.ini` (ver §11 y su advertencia de seguridad).
+- **Cuentas y contraseñas:** los pacientes no necesitan cuenta ni contraseña. Solo los **médicos** que crean salas de videollamada usan usuario y contraseña, facilitados por el administrador del sistema (ver §11).
 - **Cifrado en reposo:** la app **no cifra** los datos guardados en el navegador. Usa el cifrado de disco del sistema operativo y no uses equipos compartidos.
 - **Cifrado en la videollamada:** los datos del paciente se cifran con AES-256-GCM antes de enviarse; el vídeo y el audio van cifrados por WebRTC. Detalles y límites en §10.5.
 - **Ficha temporal:** lo que recibe el médico por videollamada no se guarda y se elimina al salir, salvo que el paciente dé un segundo permiso expreso.
@@ -697,7 +682,7 @@ dr.lopez = otra-contraseña-larga
 | La videollamada no conecta | Cortafuegos o red restrictiva | La app prueba automáticamente conexiones de relevo; prueba otra red (datos móviles) o avisa a la clínica |
 | «No se pudieron abrir los datos recibidos» (médico) | Nombre de sala distinto o datos alterados | Comprobad que ambos usáis el mismo nombre de sala y que el paciente vuelva a pulsar «Compartir mis datos» |
 | No aparece «Compartir mis datos» | Falta el nombre del paciente o no hay conexión con el médico | Escribe tu nombre, pulsa «Guardar datos» y espera a que conecte el médico |
-| El médico no puede entrar | Usuario/contraseña incorrectos o no se pudo leer `config.ini` | Revisa `config.ini` (§11); tras 3 fallos hay una espera |
+| El médico no puede entrar | Usuario/contraseña incorrectos o médico no dado de alta | Comprueba los datos o solicita el alta al administrador del sistema (§11); tras 3 fallos hay una espera |
 | No encuentro el JSON exportado | Se guarda en el directorio de descargas por defecto | Busca en la carpeta **Descargas** |
 
 ---
