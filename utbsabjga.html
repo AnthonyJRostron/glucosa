@@ -49,8 +49,46 @@
                 }, true);
             });
 
-            // Atajos de teclado
-            window.addEventListener('keydown', (e) => {
+            // El documento puede ejecutarse directamente, dentro de un iframe o
+            // como el documento que ocupa la pantalla completa. En un iframe,
+            // los atajos siguen llegando al documento hijo, pero la deteccion
+            // de DevTools basada en outerWidth/innerWidth deja de ser fiable.
+            const EMBEDDED = window.top !== window.self;
+            const FULLSCREEN = () => !!document.fullscreenElement;
+
+            // Intentamos mantener el foco en el documento protegido. Esto no
+            // impide que el navegador reciba atajos de nivel superior, pero
+            // evita que una perdida accidental de foco deje sin proteccion al iframe.
+            const refocusProtectedDocument = () => {
+                if (!PROTECTION.enabled || document.hidden) return;
+                try { if (!document.hasFocus()) window.focus(); } catch (_) {}
+            };
+            window.addEventListener('focus', refocusProtectedDocument, true);
+            document.addEventListener('visibilitychange', refocusProtectedDocument, true);
+
+            // En pantalla completa, los navegadores Chromium permiten Keyboard Lock.
+            // Se utiliza SOLO para teclas de funcion/sistema; no se bloquean las
+            // letras normales para que los formularios sigan funcionando.
+            async function updateKeyboardLock() {
+                if (!PROTECTION.enabled || !FULLSCREEN()) {
+                    try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (_) {}
+                    return;
+                }
+                if (!navigator.keyboard || !navigator.keyboard.lock) return;
+                try {
+                    await navigator.keyboard.lock([
+                        'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','PrintScreen'
+                    ]);
+                } catch (_) {
+                    // Keyboard Lock no esta disponible en todos los navegadores/iframes.
+                }
+            }
+            document.addEventListener('fullscreenchange', updateKeyboardLock, true);
+            document.addEventListener('webkitfullscreenchange', updateKeyboardLock, true);
+
+            // Atajos de teclado. Se escucha en document Y window para conservar
+            // la proteccion cuando el contenido esta embebido y entra en fullscreen.
+            const protectedKeydown = (e) => {
                 if (!PROTECTION.enabled) return;
                 const k = (e.key || '').toLowerCase();
                 const ctrl = e.ctrlKey || e.metaKey;
@@ -71,7 +109,12 @@
                 if (ctrl && ['a', 'c', 'x'].includes(k) && !isEditable(e.target)) block = true;
 
                 if (block) stop(e);
-            }, true);
+            };
+            window.addEventListener('keydown', protectedKeydown, true);
+            document.addEventListener('keydown', protectedKeydown, true);
+
+            // El menu contextual y los eventos de seleccion tambien se mantienen
+            // en el documento hijo durante fullscreen.
 
             // Deteccion de herramientas de desarrollo abiertas (dock lateral o inferior).
             // Umbral alto para no molestar a usuarios con zoom, barras laterales, etc.
@@ -86,14 +129,30 @@
                 if (!PROTECTION.enabled || !PROTECTION.detectDevtools) {
                     shield.classList.remove('on'); return;
                 }
-                const wGap = window.outerWidth - window.innerWidth;
-                const hGap = window.outerHeight - window.innerHeight;
+                // En un iframe, outerWidth/innerWidth pertenecen al contexto
+                // embebido y normalmente no reflejan el dock de DevTools del
+                // navegador. Si el padre es accesible, usamos sus dimensiones;
+                // si no lo es, conservamos la deteccion local como fallback.
+                let ow = window.outerWidth, iw = window.innerWidth;
+                let oh = window.outerHeight, ih = window.innerHeight;
+                if (EMBEDDED) {
+                    try {
+                        ow = window.top.outerWidth; iw = window.top.innerWidth;
+                        oh = window.top.outerHeight; ih = window.top.innerHeight;
+                    } catch (_) {}
+                }
+                const wGap = ow - iw;
+                const hGap = oh - ih;
                 const open = wGap > PROTECTION.devtoolsThreshold || hGap > PROTECTION.devtoolsThreshold;
                 if (open !== lastOpen) {
                     lastOpen = open;
                     shield.classList.toggle('on', open);
                 }
             }, 1000);
+
+            // Si el documento ya se encuentra en fullscreen al cargarse (posible
+            // cuando el iframe es creado por un contenedor), activar la proteccion.
+            updateKeyboardLock();
         })();
     </script>
     <script>
@@ -16736,6 +16795,7 @@ function shiftSampleDatasetToToday(data) {
                 f.id = 'vcFrame';
                 f.title = 'Videollamada';
                 f.setAttribute('allow', 'camera *; microphone *; display-capture *; autoplay *; clipboard-write *; fullscreen *');
+                f.setAttribute('allowfullscreen', 'true');
                 f.srcdoc = VC_HTML
                     .replace(
                         "      } else {\n        setStatus('Connecting…');\n        connectToHost();",
