@@ -139,6 +139,13 @@ Tienes **cuatro formas** de entregar tus datos al profesional sanitario:
 
 - **Sin internet, las gráficas y el PDF no funcionan.** El registro de glucemias e insulina sí funciona sin conexión, pero no podrás visualizar gráficas ni generar PDF hasta que recuperes la conexión.
 - El **almacenamiento local** está vinculado al navegador y al dispositivo. Si borras los datos del navegador, pierdes el diario. **Exporta semanalmente.**
+- **Capacidad limitada.** El navegador reserva unos **5 MB** para la app, y todos los datos comparten ese espacio. Como orientación (estimación, varía según las notas y el uso):
+  - Un **paciente con una lectura al día** ocupa unos **0,35 MB al año** → caben unos **10 pacientes con un año de datos**.
+  - Con **3 o 4 lecturas al día** ocupa **0,9–1,4 MB al año** → caben **3–4 pacientes-año**.
+  - Un paciente que usa la app a diario durante varios años puede llenar el espacio (unos **4 años** con 3 lecturas al día): **exporta y archiva** los años antiguos.
+  - Cuanto más se llena, más lenta puede notarse la app, sobre todo en móviles.
+  - Si aparece **«almacenamiento lleno»**, exporta una copia de seguridad y borra registros antiguos.
+  - **Un médico que guarda fichas** de pacientes recibidas por videollamada comparte este mismo límite: es adecuado para unos pocos pacientes, no como archivo de toda una clínica.
 - El **modo incógnito** no conserva los datos al cerrar la ventana.
 - La **meteorología** requiere conexión en el momento de consultar; si no hay conexión, el registro se guarda con los campos meteorológicos vacíos.
 - Los **PDF** se generan con el motor de impresión del navegador. Si el PDF sale con saltos raros, revisa los márgenes de impresión.
@@ -520,7 +527,7 @@ La app incluye una **videoconsulta entre médico y paciente** con vídeo, audio,
 | **Datos del paciente** | Se **cifran en tu equipo antes de enviarse** con **AES-256-GCM** (confidencialidad + detección de manipulación). La clave se deriva del **nombre de la sala** con PBKDF2-SHA256 (250.000 iteraciones, sal e IV aleatorios), y los datos se comprimen antes de cifrar. Solo se descifran en el equipo del médico. |
 | **Quién puede ser médico** | Solo los médicos dados de alta por el administrador del sistema (§11), con usuario y contraseña. Tras 3 fallos hay un tiempo de espera. El rol de médico **no se recuerda**: se pide siempre la contraseña. |
 | **Datos de identificación** | **DNI y nº de Seguridad Social no se envían** salvo que el paciente marque la casilla opcional. |
-| **Lo que ve el médico** | Una **ficha temporal** (🩺, aviso amarillo): **no se guarda** en el equipo ni en el servidor, **no se puede exportar** como copia de seguridad ni incluir en exportaciones y **se elimina al salir** de la videollamada. |
+| **Lo que ve el médico** | Una **ficha temporal** (🩺, aviso amarillo): **no se guarda** en el equipo del médico, **no se puede exportar** como copia de seguridad ni incluir en exportaciones y **se elimina al salir** de la videollamada. |
 | **Protección ante pérdidas** | Si el médico cierra o recarga la página con una ficha temporal abierta, el navegador pide confirmación. |
 | **Integridad** | Si el nombre de sala no coincide o los datos se han alterado, **no se pueden descifrar** y la app lo indica. |
 | **Guardado** | Nunca ocurre sin el **Permiso 2** del paciente (§10.4). |
@@ -549,7 +556,7 @@ La app incluye una **videoconsulta entre médico y paciente** con vídeo, audio,
 2. Se abre el **consentimiento informado**, que explica:
    - **Qué se guardaría:** lo que acabas de compartir (perfil clínico, glucosa, medicación y presión arterial si la usas). DNI y nº de Seguridad Social solo si los marcaste.
    - **Para qué:** el seguimiento clínico de tu diabetes y tu historial de atención.
-   - **Dónde y quién:** en el sistema del profesional o de la clínica, que será el **responsable del tratamiento**. Pregúntale su identidad, contacto y plazo de conservación.
+   - **Dónde y quién:** en el **almacenamiento local del navegador del equipo del médico**. El profesional o la clínica será el **responsable del tratamiento**. Pregúntale su identidad, contacto y plazo de conservación.
    - **Tus derechos:** acceso, rectificación, supresión, limitación, portabilidad y **retirar el consentimiento en cualquier momento** sin que afecte a tu atención. Puedes reclamar ante la **Agencia Española de Protección de Datos (aepd.es)**.
    - **Es voluntario:** puedes negarte y seguir con la consulta.
 3. Marca la casilla **«He leído y comprendo esta información y autorizo expresamente…»** y pulsa **«Aceptar y continuar»** (hasta que no marques la casilla el botón está desactivado).
@@ -566,7 +573,7 @@ La app incluye una **videoconsulta entre médico y paciente** con vídeo, audio,
 3. Espera al paciente. Si entra antes de que abras la sala, se conectará solo cuando la abras.
 4. Cuando el paciente comparta sus datos aparece su **ficha temporal** (marcada con 🩺 y un **aviso amarillo**). Puedes consultarla como cualquier otro paciente (registros, análisis, informes), pero **no se guarda, no se exporta y se elimina al salir**.
 5. Si el paciente **autoriza el guardado**, aparece el aviso **«El paciente autoriza guardar sus datos»**:
-   - **«Guardar en mis pacientes»**: la ficha se guarda **junto con la fecha del consentimiento** (y tu usuario). Si ya tienes un paciente con el mismo DNI (o mismo nombre y fecha de nacimiento), la app **pregunta si quieres sobrescribirlo**.
+   - **«Guardar en mis pacientes»**: la ficha se guarda **en el almacenamiento local de este navegador, junto con la fecha del consentimiento** (y tu usuario). Haz copias de seguridad con regularidad (§2.5) y ten en cuenta la capacidad (§3.3). Si ya tienes un paciente con el mismo DNI (o mismo nombre y fecha de nacimiento), la app **pregunta si quieres sobrescribirlo**.
    - **«No guardar»**: la ficha sigue siendo temporal.
 6. Al salir con una ficha temporal abierta, la app pide confirmación porque se eliminará.
 
@@ -637,7 +644,9 @@ Después, **reinicia el navegador por completo**. Si la llamada no conecta, prue
 
 **¿Puedo cambiar de mg/dL a mmol/L?** Sí, la app convierte automáticamente.
 
-**¿Puedo tener varios pacientes?** Sí.
+**¿Puedo tener varios pacientes?** Sí. Todos se guardan en el mismo navegador y comparten unos 5 MB, así que caben unos 10 pacientes con un año de datos (§3.3).
+
+**¿Cuántos registros caben?** Cada lectura ocupa unos 0,7 KB; con una lectura al día son unos 0,35 MB por paciente y año. Exporta y archiva los años antiguos.
 
 **¿Puedo registrar solo la insulina?** Sí.
 
@@ -670,7 +679,7 @@ Después, **reinicia el navegador por completo**. Si la llamada no conecta, prue
 | Problema | Causa probable | Solución |
 |---|---|---|
 | La app no carga | JavaScript desactivado o navegador antiguo | Activa JavaScript o actualiza el navegador |
-| No se guardan los datos | Modo incógnito o almacenamiento lleno | Sal del modo incógnito o libera espacio |
+| No se guardan los datos | Modo incógnito o almacenamiento lleno | Sal del modo incógnito, exporta una copia de seguridad y borra registros antiguos |
 | No aparecen las gráficas | Sin conexión a internet | Conéctate y recarga |
 | No se genera el PDF | Sin conexión a internet | Conéctate y vuelve a intentarlo |
 | No aparece la meteorología | Sin ubicación configurada o sin conexión | Configura la ubicación y comprueba la conexión |
