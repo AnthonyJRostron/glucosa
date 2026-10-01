@@ -177,21 +177,14 @@ html, body {
     0% { transform: translateX(-130%); }
     100% { transform: translateX(310%); }
 }
-#page2 {
+#appFrame {
     display: none;
     position: fixed;
     inset: 0;
-    overflow: auto;
-    padding: 32px;
+    width: 100%;
+    height: 100%;
+    border: 0;
     background: white;
-    color: #111;
-}
-#page2 h1, #page2 h2 {
-    color: #111;
-}
-#page2 code {
-    background: #eee;
-    padding: 2px 5px;
 }
 </style>
 </head>
@@ -208,13 +201,7 @@ html, body {
     </div>
 </div>
 
-<!--
-The following is the second page. It deliberately has no additional CSS.
-Replace its contents with the real application page when integrating this splash.
--->
-<div id="page2" aria-label="Página principal">
-    <p>Esta página se cargará directamente en la misma pestaña.</p>
-</div>
+<iframe id="appFrame" title="Aplicación" aria-label="Página principal"></iframe>
 
 <script>
 "use strict";
@@ -319,7 +306,12 @@ async function start() {
     if (!valid) return;
 
     setTimeout(() => {
-        window.location.replace(TARGET_FILE);
+        const appFrame = document.getElementById("appFrame");
+        appFrame.addEventListener("load", () => {
+            document.getElementById("splash").style.display = "none";
+        }, { once: true });
+        appFrame.src = TARGET_FILE;
+        appFrame.style.display = "block";
     }, 5000);
 }
 
