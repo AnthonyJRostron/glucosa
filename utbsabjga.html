@@ -3870,6 +3870,12 @@
                 <div id="confoundInsightsText" style="font-size:0.85rem;">Cargando analisis...</div>
             </div>
 
+            <!-- Factores declarados el dia anterior: Metodo A (exclusion) y Metodo B (estratificacion) -->
+            <div id="lagFactorsBox" class="mood-insight" style="border-left-color:#b06a17;">
+                <h4>Factores del dia anterior (efecto arrastre)</h4>
+                <div id="lagFactorsContent" style="font-size:0.85rem;">Cargando analisis...</div>
+            </div>
+
             <!-- Sección ANOVA -->
             <div id="anovaContainer" class="anova-results">
                 <h4>Analisis exploratorio de correlaciones y comparaciones (descriptivo, no causal)</h4>
@@ -12946,6 +12952,220 @@ function shiftSampleDatasetToToday(data) {
             }
 
 
+            // ================================================================
+            // ===== FACTORES DEL DIA ANTERIOR (efecto arrastre) - Metodos A y B ==
+            // ================================================================
+            // Complementa el filtro de factores del MISMO registro (recordHasAnyConfound),
+            // que se conserva sin cambios. Aqui se mira el dia anterior (D-1) de cada
+            // lectura. Es solo informativo: no altera la severidad clinica ni las
+            // estadisticas principales.
+            //  - Metodo A (restriccion): se conservan solo las lecturas cuyo D-1 tiene
+            //    registro y ningun factor marcado.
+            //  - Metodo B (estratificacion): no se descarta nada; se compara D-1 con
+            //    factor vs D-1 sin factor, usando la media diaria como unidad de analisis.
+            const LAG_CATS = [
+                { id: 'dieta', label: 'Comida atipica o abundante' },
+                { id: 'alcohol', label: 'Alcohol' },
+                { id: 'stress', label: 'Emociones: estres / ansiedad' },
+                { id: 'sleep', label: 'Sueno insuficiente' },
+                { id: 'illness', label: 'Enfermedad / malestar' }
+            ];
+            const LAG_MIN_DAYS = 5;
+            let lagAlsoSameDay = false;
+            let lastLagRecords = null;
+
+            function lagCatsOfRecord(r) {
+                const s = new Set();
+                const diet = Array.isArray(r.dietContext) ? r.dietContext : [];
+                if (diet.includes('alcohol')) s.add('alcohol');
+                if (diet.some(id => id !== 'alcohol' && DIET_CONFOUND_IDS.has(id))) s.add('dieta');
+                getMoodConfoundEntries(r.moods).forEach(e => s.add(e.categoryId));
+                return s;
+            }
+
+            function lagPrevDate(ds) {
+                const p = String(ds).split('-').map(Number);
+                const d = new Date(p[0], p[1] - 1, p[2] - 1);
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(d.getDate()).padStart(2, '0');
+            }
+
+            // Clasifica cada registro del rango segun su dia anterior. El dia anterior se
+            // busca en TODOS los registros del paciente (no solo en el rango filtrado).
+            function classifyByPrevDay(records) {
+                const byDate = {};
+                for (const r of getCurrentPatientRecords()) {
+                    const e = byDate[r.date] || (byDate[r.date] = new Set());
+                    lagCatsOfRecord(r).forEach(c => e.add(c));
+                }
+                const out = { clean: [], exposed: [], unknown: [], cats: new Map() };
+                for (const r of records) {
+                    const prev = byDate[lagPrevDate(r.date)];
+                    if (!prev) out.unknown.push(r);
+                    else if (prev.size) { out.exposed.push(r); out.cats.set(r, prev); }
+                    else out.clean.push(r);
+                }
+                return out;
+            }
+
+            function lagDailyTiming(recs, key) {
+                const m = {};
+                for (const r of recs) {
+                    const v = numericValue(r[key]);
+                    if (v !== null) (m[r.date] = m[r.date] || []).push(v);
+                }
+                return Object.keys(m).map(d => safeAvg(m[d]));
+            }
+            function lagDailyAll(recs) { return dailyMeans(recs).map(d => d.mean); }
+
+            function lagContrast(label, expArr, refArr) {
+                return { label, nE: expArr.length, nR: refArr.length,
+                    w: welchTTest(expArr, refArr), mw: mannWhitneyU(expArr, refArr) };
+            }
+
+            function lagRowHtml(c) {
+                const low = c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS;
+                const tag = low ? ' <span title="Menos de ' + LAG_MIN_DAYS +
+                    ' dias en un grupo: no interpretable">(n bajo)</span>' : '';
+                const head = `<td>${escapeHtml(c.label)}${tag}</td><td>${c.nE}</td><td>${c.nR}</td>`;
+                if (!c.w) return `<tr>${head}<td colspan="5">Datos insuficientes</td></tr>`;
+                const w = c.w;
+                return `<tr>${head}<td>${fmtNum(w.meanA)}</td><td>${fmtNum(w.meanB)}</td>` +
+                    `<td>${w.diff > 0 ? '+' : ''}${fmtNum(w.diff)} [${fmtNum(w.ci[0])}, ${fmtNum(w.ci[1])}]</td>` +
+                    `<td>${formatP(w.p)}${c.mw ? ' / ' + formatP(c.mw.p) : ''}</td>` +
+                    `<td>${w.cohend === null ? '--' : w.cohend.toFixed(2)}</td></tr>`;
+            }
+
+            function lagTableHtml(rows) {
+                return '<div class="ba-table-scroll"><table class="ba-table"><thead><tr><th>Comparacion</th>' +
+                    '<th>Dias con factor</th><th>Dias sin factor</th><th>Media con</th><th>Media sin</th>' +
+                    '<th>Diferencia [IC 95%]</th><th>p Welch / MW</th><th>d</th></tr></thead><tbody>' +
+                    rows.map(lagRowHtml).join('') + '</tbody></table></div>';
+            }
+
+            // Grafico de bosque (CSS): diferencia de medias (mg/dL) con IC 95% por factor.
+            function lagForestHtml(cs) {
+                const rows = cs.filter(c => c.w && isFinite(c.w.ci[0]) && isFinite(c.w.ci[1]));
+                if (!rows.length) return '';
+                const m = Math.max(5, ...rows.map(c => Math.max(Math.abs(c.w.ci[0]), Math.abs(c.w.ci[1]))));
+                const pos = v => 50 + (Math.max(-m, Math.min(m, v)) / m) * 50;
+                const body = rows.map(c => {
+                    const lo = pos(c.w.ci[0]), hi = pos(c.w.ci[1]), pt = pos(c.w.diff);
+                    const col = c.w.diff > 0 ? '#b13e4b' : '#2a7a9c';
+                    const op = (c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS) ? 0.35 : 1;
+                    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">` +
+                        `<div style="flex:0 0 36%;font-size:0.75rem;">${escapeHtml(c.label)}</div>` +
+                        `<div style="position:relative;flex:1;height:16px;opacity:${op};">` +
+                        `<div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed rgba(128,128,128,0.7);"></div>` +
+                        `<div style="position:absolute;left:${lo}%;width:${Math.max(0.5, hi - lo)}%;top:7px;height:2px;background:${col};"></div>` +
+                        `<div style="position:absolute;left:calc(${pt}% - 4px);top:4px;width:8px;height:8px;border-radius:50%;background:${col};"></div>` +
+                        `</div></div>`;
+                }).join('');
+                const axis = `<div style="display:flex;gap:8px;"><div style="flex:0 0 36%;"></div>` +
+                    `<div style="flex:1;display:flex;justify-content:space-between;font-size:0.65rem;opacity:0.8;">` +
+                    `<span>-${m.toFixed(0)}</span><span>0</span><span>+${m.toFixed(0)} mg/dL</span></div></div>`;
+                return body + axis;
+            }
+
+            function renderLagFactorsPanel(records) {
+                if (records !== undefined) lastLagRecords = records; else records = lastLagRecords;
+                const box = document.getElementById('lagFactorsContent');
+                if (!box || !records) return;
+                if (!records.length) { box.textContent = 'No hay registros en el rango seleccionado.'; return; }
+
+                const cls = classifyByPrevDay(records);
+                const sameOk = r => !lagAlsoSameDay || !recordHasAnyConfound(r);
+                const E = cls.exposed.filter(sameOk), C = cls.clean.filter(sameOk);
+                const nAll = countTotalLecturas(records), nC = countTotalLecturas(C);
+                const pct = nAll ? (nC / nAll * 100).toFixed(0) : '0';
+
+                const smbg = getSmbgTarget(snapshotCurrentProfile());
+                const T = [
+                    { key: 'before', label: 'Antes', long: 'Antes de comer', color: 'rgb(31,123,77)' },
+                    { key: 'after', label: 'Desp.', long: 'Despues de comer', color: 'rgb(42,111,151)' },
+                    { key: 'night', label: 'Noche', long: 'Nocturna', color: 'rgb(107,76,138)' }
+                ];
+                const boxAll = buildTimingBoxStatsFromRecords(records);
+                const boxC = buildTimingBoxStatsFromRecords(C);
+                const boxE = buildTimingBoxStatsFromRecords(E);
+                const grey = 'rgb(127,140,153)', amber = 'rgb(212,140,44)';
+                const groupsA = [], groupsB = [];
+                T.forEach(t => {
+                    const band = smbg ? smbg[t.key] : null;
+                    groupsA.push({ label: t.label + ': todas', stats: boxAll[t.key], color: grey, refBand: band });
+                    groupsA.push({ label: t.label + ': A', stats: boxC[t.key], color: t.color, refBand: band });
+                    groupsB.push({ label: t.label + ': con', stats: boxE[t.key], color: amber, refBand: band });
+                    groupsB.push({ label: t.label + ': sin', stats: boxC[t.key], color: t.color, refBand: band });
+                });
+
+                const rowsB = [lagContrast('Todas las lecturas (media diaria)', lagDailyAll(E), lagDailyAll(C))];
+                T.forEach(t => rowsB.push(lagContrast(t.long, lagDailyTiming(E, 'glucose' + t.key.charAt(0).toUpperCase() + t.key.slice(1)),
+                    lagDailyTiming(C, 'glucose' + t.key.charAt(0).toUpperCase() + t.key.slice(1)))));
+                const rowsCat = LAG_CATS.map(cat => lagContrast(cat.label,
+                    lagDailyAll(E.filter(r => cls.cats.get(r).has(cat.id))), lagDailyAll(C)));
+
+                const card = 'background:rgba(176,106,23,0.08);border-radius:8px;padding:8px 12px;margin:8px 0;';
+                box.innerHTML =
+                    `<p>Registros del rango: ${records.length}. Dia anterior sin registro (se excluyen de ambos metodos): <b>${cls.unknown.length}</b> · ` +
+                    `dia anterior con algun factor: <b>${cls.exposed.length}</b> · dia anterior sin factores: <b>${cls.clean.length}</b>.</p>` +
+                    `<label style="display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer;">` +
+                    `<input type="checkbox" id="lagSameDayChk" ${lagAlsoSameDay ? 'checked' : ''}> ` +
+                    `Excluir tambien las lecturas con factor el mismo dia (se aplica a ambos metodos)</label>` +
+
+                    `<div style="${card}"><b>Metodo A · Exclusion por dia anterior (restriccion)</b>` +
+                    `<p><b>Como se filtra:</b> solo se conservan las lecturas cuyo dia anterior tiene registro y ninguna circunstancia marcada ` +
+                    `(comida atipica o abundante, alcohol, estres/ansiedad/nerviosismo, dormir mal, fiebre/malestar). Los dias previos sin registro ` +
+                    `tambien se excluyen porque no se sabe como fueron.</p>` +
+                    `<p><b>Por que:</b> una comida muy grande o rica en grasa/proteina, el alcohol, dormir poco o el malestar pueden alterar la glucosa ` +
+                    `durante horas y, en algunos casos, hasta el dia siguiente; quitar esas lecturas deja ver el patron de base. ` +
+                    `<b>Coste:</b> menos lecturas, y si los dias atipicos son sistematicos (p. ej. fines de semana) lo que queda puede no ser representativo.</p></div>` +
+                    `<p>Conserva <b>${nC}</b> de ${nAll} lecturas (${pct}%). Cajas: <i>todas</i> (gris) frente a <i>A</i> (color).</p>` +
+                    `<div class="chart-wrapper" style="height:260px;"><canvas id="lagBoxA"></canvas></div>` +
+
+                    `<div style="${card}"><b>Metodo B · Estratificacion: dia anterior con factor frente a sin factor</b>` +
+                    `<p><b>Como se filtra:</b> no se descarta nada. Las lecturas se separan en dos grupos segun su dia anterior (con al menos un factor / ` +
+                    `sin ninguno) y se comparan usando la media de cada dia como unidad de analisis (t de Welch y Mann-Whitney, IC 95%). ` +
+                    `Despues se repite por tipo de factor frente al mismo grupo de referencia (dias previos sin factores).</p>` +
+                    `<p><b>Por que:</b> el efecto no tiene el mismo sentido en todos los factores (el alcohol por la tarde-noche tiende a bajar la glucosa de la ` +
+                    `manana siguiente; otros factores tienden a subirla), y mezclarlos en un solo grupo puede cancelar efectos. Separar permite ver cuanto y en que ` +
+                    `direccion cambia la glucosa en tus propios datos, sin darlo por supuesto.</p></div>` +
+                    `<div class="chart-wrapper" style="height:260px;"><canvas id="lagBoxB"></canvas></div>` +
+                    `<p class="chart-caption">Cajas por momento de medicion: <i>con</i> (naranja) = dia anterior con factor, <i>sin</i> (color) = dia anterior sin factores. ` +
+                    `Mismo convenio que los demas diagramas (caja P25-P75, linea = mediana, rombo = media, bigotes = minimo-maximo real).</p>` +
+                    `<h5 class="chart-title-label">Diferencia de medias (con factor − sin factor)</h5>` +
+                    lagTableHtml(rowsB) +
+                    `<h5 class="chart-title-label">Por tipo de factor del dia anterior (los tipos pueden solaparse)</h5>` +
+                    lagTableHtml(rowsCat) +
+                    lagForestHtml(rowsCat) +
+                    `<p class="chart-caption">Rojo = glucosa mas alta tras un dia con ese factor; azul = mas baja. Los puntos tenues y las filas marcadas "(n bajo)" ` +
+                    `tienen menos de ${LAG_MIN_DAYS} dias en algun grupo y no son interpretables.</p>` +
+
+                    `<p class="chart-caption" style="color:#b06a17;font-weight:600;">Resultados descriptivos y exploratorios: no demuestran causalidad, no se corrigen ` +
+                    `por comparaciones multiples y no modifican la severidad clinica ni las estadisticas principales. Un factor declarado un dia no implica que ` +
+                    `explique la lectura del dia siguiente.</p>` +
+                    `<details style="margin:8px 0;"><summary style="cursor:pointer;font-weight:600;">Evidencia cientifica que justifica estos filtros</summary>` +
+                    `<ul style="margin:6px 0 0 18px;font-size:0.8rem;">` +
+                    `<li><b>Alcohol por la tarde-noche (DM1):</b> glucosa en ayunas y tras el desayuno mas baja a la manana siguiente y riesgo de hipoglucemia ` +
+                    `(Turner et al., Diabetes Care 2001;24:1888-93; 6 hombres ingresados).</li>` +
+                    `<li><b>Comidas ricas en grasa y proteina:</b> elevan la glucosa entre 3 y 5-6 h despues de comer (Smart et al., Diabetes Care 2013;36:3897-902; ` +
+                    `Bell et al., Diabetes Care 2015). Alcanza la noche; su efecto al dia siguiente no esta demostrado directamente.</li>` +
+                    `<li><b>Cena y respuesta al desayuno ("efecto segunda comida"):</b> el indice glucemico de la cena modifica la respuesta glucemica al desayuno ` +
+                    `(Stevenson et al., Eur J Clin Nutr 2008;62:608-16; n=7). En un estudio con DM2 la glucosa en ayunas no cambio.</li>` +
+                    `<li><b>Sueno:</b> una sola noche de sueno parcial reduce la sensibilidad a la insulina en DM1 (Donga et al., Diabetes Care 2010;33:1573-7; ` +
+                    `pocos pacientes), sin cambiar la glucosa basal.</li>` +
+                    `<li><b>Estres y emociones:</b> evidencia mixta. En alrededor de un tercio de adultos con DM1 el estres se asocio a la glucosa del mismo dia o ` +
+                    `del siguiente, con direccion variable (Riazi et al., Diabetes Res Clin Pract 2004;66:237-44); otro estudio de diario no hallo relacion clara con ` +
+                    `el estres del dia previo. Por eso se analiza por separado en el Metodo B.</li></ul>` +
+                    `<p style="font-size:0.8rem;">Son estudios pequenos o experimentales, la mayoria en DM1 y con efectos sobre todo en lecturas tras comer. ` +
+                    `Los filtros ayudan a interpretar los datos; no sustituyen el criterio del equipo sanitario.</p></details>`;
+
+                const cA = document.getElementById('lagBoxA'), cB = document.getElementById('lagBoxB');
+                if (cA) drawBoxPlotChart(cA, groupsA, {});
+                if (cB) drawBoxPlotChart(cB, groupsB, {});
+                const chk = document.getElementById('lagSameDayChk');
+                if (chk) chk.addEventListener('change', () => { lagAlsoSameDay = chk.checked; renderLagFactorsPanel(); });
+            }
+
             function renderStatsAndCharts() {
                 const records = getFilteredRecords();
                 adviceContainer.innerHTML = '';
@@ -13109,6 +13329,14 @@ function shiftSampleDatasetToToday(data) {
                     confoundInsightsText.innerHTML = confoundRes.html;
                 } catch (e) {
                     confoundInsightsText.textContent = 'Error al analizar los factores de confusion: ' + e.message;
+                }
+
+                // Factores declarados el dia anterior (metodos A y B)
+                try {
+                    renderLagFactorsPanel(records);
+                } catch (e) {
+                    const lagBox = document.getElementById('lagFactorsContent');
+                    if (lagBox) lagBox.textContent = 'Error al analizar los factores del dia anterior: ' + e.message;
                 }
 
                 // Análisis exploratorio de correlaciones/comparaciones (Kruskal-Wallis, ANOVA, Pearson)
