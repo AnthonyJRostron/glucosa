@@ -3695,6 +3695,7 @@
                 <canvas id="timingBoxPlotChart"></canvas>
             </div>
             <p id="timingBoxExcludedNote" class="chart-caption" style="color:#b06a17;font-weight:600;"></p>
+            <p id="timingBoxFilterNote" class="chart-caption"></p>
             <p class="chart-caption">Pensado para revisarlo con el equipo sanitario: la caja marca del percentil 25
                 al 75, la linea gruesa es la mediana, el rombo es la media y los bigotes llegan hasta el minimo y el
                 maximo real observados (no se ocultan valores). La banda verde discontinua es el objetivo de
@@ -3818,6 +3819,7 @@
                     <canvas id="beforeAfterBoxPlotChart"></canvas>
                 </div>
                 <p id="beforeAfterBoxExcludedNote" class="chart-caption" style="color:#b06a17;font-weight:600;"></p>
+                <p id="beforeAfterBoxFilterNote" class="chart-caption"></p>
                 <p class="chart-caption">Seis cajas: los tres momentos de medicion (antes/despues/noche) en cada uno
                     de los dos periodos comparados. Permite ver si el cambio afecto a toda la distribucion o solo a
                     la media, y si afecto por igual a los tres momentos del dia. Mismo convenio que el grafico
@@ -12092,6 +12094,27 @@ function shiftSampleDatasetToToday(data) {
                     }
                 }
                 addTableSheet('Estadisticas', statsRows, [{ wch: 28 }, { wch: 60 }]);
+                let lagAnForXls = null;
+                try {
+                    lagAnForXls = computeLagAnalysis(records, lagAlsoSameDay);
+                    const dX = lagDescribe(lagAnForXls);
+                    const lagRowsX = [['Concepto', 'Detalle']];
+                    for (const k of ['S', 'A', 'B']) {
+                        lagRowsX.push([dX[k].title, '']);
+                        lagRowsX.push(['Como se filtra', dX[k].how]);
+                        lagRowsX.push(['Por que', dX[k].why]);
+                        lagRowsX.push(['Resultado', dX[k].count]);
+                        lagRowsX.push(['Leyenda del grafico', dX[k].legend]);
+                    }
+                    lagRowsX.push(['Aviso', dX.caution], ['', ''], ['Metodo B - comparacion por momento', ''], LAG_TABLE_HEAD);
+                    lagAnForXls.rowsB.forEach(c => lagRowsX.push(lagRowCells(c)));
+                    lagRowsX.push(['', ''], ['Metodo B - por tipo de factor', ''], LAG_TABLE_HEAD);
+                    lagAnForXls.rowsCat.forEach(c => lagRowsX.push(lagRowCells(c)));
+                    lagRowsX.push(['', ''], ['Evidencia cientifica', '']);
+                    dX.evidence.forEach(e => lagRowsX.push(['', e]));
+                    addTableSheet('Filtrado_dia_anterior', lagRowsX, [{ wch: 34 }, { wch: 110 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 8 }]);
+                } catch (e) { console.warn('Excel: filtrado del dia anterior no disponible', e); }
+
 
                 const chartRows = [['Fecha', 'Glucosa antes', 'Glucosa despues', 'Glucosa nocturna', 'Temperatura (C)']];
                 const sorted = [...records].sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -12125,8 +12148,8 @@ function shiftSampleDatasetToToday(data) {
                     ['Tiempo en rango diario', 'tirDailyChart'],
                     ['Tiempo en rango semanal', 'weeklyTIRChart'],
                     ['Tiempo en rango mensual', 'monthlyTIRChart'],
-                    ['Distribucion por momento de medicion (diagrama de cajas)', 'timingBoxPlotChart'],
-                    ['Distribucion antes/despues (diagrama de cajas)', 'beforeAfterBoxPlotChart']
+                    ['Distribucion por momento de medicion (diagrama de cajas) - ' + (hideConfoundedInBoxPlots ? 'FILTRADO: sin lecturas con factor de confusion del mismo dia (ver hoja Filtrado_dia_anterior)' : 'SIN FILTRO: todas las lecturas'), 'timingBoxPlotChart'],
+                    ['Distribucion antes/despues (diagrama de cajas) - ' + (hideConfoundedInBoxPlots ? 'FILTRADO: sin lecturas con factor de confusion del mismo dia en ambos periodos' : 'SIN FILTRO: todas las lecturas'), 'beforeAfterBoxPlotChart']
                 ];
                 let chartRow = 3;
                 let embeddedChartCount = 0;
@@ -12136,6 +12159,21 @@ function shiftSampleDatasetToToday(data) {
                         embeddedChartCount++;
                         chartRow += 25;
                     }
+                }
+                if (lagAnForXls) {
+                    try {
+                        const smbgX = getSmbgTarget(snapshotCurrentProfile());
+                        const dX2 = lagDescribe(lagAnForXls);
+                        for (const k of ['S', 'A', 'B']) {
+                            const cvX = lagOffscreenBox(lagAnForXls, k, smbgX, 900, 430);
+                            if (addChartSnapshot(chartsSheet, dX2[k].title + ' | Como se filtra: ' + dX2[k].how.slice(0, 160) + '... (texto completo en la hoja Filtrado_dia_anterior)', cvX, chartRow)) {
+                                embeddedChartCount++; chartRow += 25;
+                            }
+                        }
+                        if (addChartSnapshot(chartsSheet, 'Metodo B: diferencia de medias por factor (IC 95%)', lagOffscreenForest(lagAnForXls, 900, 430), chartRow)) {
+                            embeddedChartCount++; chartRow += 25;
+                        }
+                    } catch (e) { console.warn('Excel: graficos del dia anterior no disponibles', e); }
                 }
                 if (embeddedChartCount === 0) {
                     chartsSheet.getCell('A4').value = 'No habia graficos disponibles para el periodo seleccionado.';
@@ -12955,14 +12993,15 @@ function shiftSampleDatasetToToday(data) {
             // ================================================================
             // ===== FACTORES DEL DIA ANTERIOR (efecto arrastre) - Metodos A y B ==
             // ================================================================
-            // Complementa el filtro de factores del MISMO registro (recordHasAnyConfound),
-            // que se conserva sin cambios. Aqui se mira el dia anterior (D-1) de cada
-            // lectura. Es solo informativo: no altera la severidad clinica ni las
-            // estadisticas principales.
-            //  - Metodo A (restriccion): se conservan solo las lecturas cuyo D-1 tiene
-            //    registro y ningun factor marcado.
-            //  - Metodo B (estratificacion): no se descarta nada; se compara D-1 con
-            //    factor vs D-1 sin factor, usando la media diaria como unidad de analisis.
+            // Tres diagramas de cajas, tres filtros distintos (todos solo informativos:
+            // nunca alteran la severidad clinica ni las estadisticas principales):
+            //  - S (mismo dia, ya existia): se excluyen lecturas con factor en su propio registro.
+            //  - A (restriccion por dia anterior): solo lecturas cuyo dia anterior esta
+            //    registrado y sin factores.
+            //  - B (estratificacion por dia anterior): no se descarta nada; se compara
+            //    dia anterior con factor vs sin factor.
+            // La descripcion de cada filtro vive en lagDescribe() y se reutiliza en
+            // pantalla, PDF, Excel y JSON para que todos los informes la expliquen igual.
             const LAG_CATS = [
                 { id: 'dieta', label: 'Comida atipica o abundante' },
                 { id: 'alcohol', label: 'Alcohol' },
@@ -12971,8 +13010,14 @@ function shiftSampleDatasetToToday(data) {
                 { id: 'illness', label: 'Enfermedad / malestar' }
             ];
             const LAG_MIN_DAYS = 5;
+            const LAG_VIEW_KEY = 'glucosa-lag-box-view';
             let lagAlsoSameDay = false;
             let lastLagRecords = null;
+            let lagView = { S: true, A: true, B: true };
+            try {
+                const rawView = safeStorageGet(LAG_VIEW_KEY);
+                if (rawView) { const v = JSON.parse(rawView); lagView = { S: v.S !== false, A: v.A !== false, B: v.B !== false }; }
+            } catch (e) { /* valores por defecto */ }
 
             function lagCatsOfRecord(r) {
                 const s = new Set();
@@ -12990,8 +13035,7 @@ function shiftSampleDatasetToToday(data) {
                     String(d.getDate()).padStart(2, '0');
             }
 
-            // Clasifica cada registro del rango segun su dia anterior. El dia anterior se
-            // busca en TODOS los registros del paciente (no solo en el rango filtrado).
+            // El dia anterior se busca en TODOS los registros del paciente (no solo en el rango filtrado).
             function classifyByPrevDay(records) {
                 const byDate = {};
                 for (const r of getCurrentPatientRecords()) {
@@ -13017,54 +13061,205 @@ function shiftSampleDatasetToToday(data) {
                 return Object.keys(m).map(d => safeAvg(m[d]));
             }
             function lagDailyAll(recs) { return dailyMeans(recs).map(d => d.mean); }
-
             function lagContrast(label, expArr, refArr) {
                 return { label, nE: expArr.length, nR: refArr.length,
                     w: welchTTest(expArr, refArr), mw: mannWhitneyU(expArr, refArr) };
             }
+            const LAG_TIMINGS = [
+                { key: 'before', label: 'Antes', long: 'Antes de comer', field: 'glucoseBefore', color: 'rgb(31,123,77)' },
+                { key: 'after', label: 'Desp.', long: 'Despues de comer', field: 'glucoseAfter', color: 'rgb(42,111,151)' },
+                { key: 'night', label: 'Noche', long: 'Nocturna', field: 'glucoseNight', color: 'rgb(107,76,138)' }
+            ];
 
-            function lagRowHtml(c) {
-                const low = c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS;
-                const tag = low ? ' <span title="Menos de ' + LAG_MIN_DAYS +
-                    ' dias en un grupo: no interpretable">(n bajo)</span>' : '';
-                const head = `<td>${escapeHtml(c.label)}${tag}</td><td>${c.nE}</td><td>${c.nR}</td>`;
-                if (!c.w) return `<tr>${head}<td colspan="5">Datos insuficientes</td></tr>`;
-                const w = c.w;
-                return `<tr>${head}<td>${fmtNum(w.meanA)}</td><td>${fmtNum(w.meanB)}</td>` +
-                    `<td>${w.diff > 0 ? '+' : ''}${fmtNum(w.diff)} [${fmtNum(w.ci[0])}, ${fmtNum(w.ci[1])}]</td>` +
-                    `<td>${formatP(w.p)}${c.mw ? ' / ' + formatP(c.mw.p) : ''}</td>` +
-                    `<td>${w.cohend === null ? '--' : w.cohend.toFixed(2)}</td></tr>`;
+            function computeLagAnalysis(records, sameDayToo) {
+                const cls = classifyByPrevDay(records);
+                const sameOk = r => !sameDayToo || !recordHasAnyConfound(r);
+                const E = cls.exposed.filter(sameOk), C = cls.clean.filter(sameOk);
+                const S = records.filter(r => !recordHasAnyConfound(r));
+                const rowsB = [lagContrast('Todas las lecturas (media diaria)', lagDailyAll(E), lagDailyAll(C))];
+                LAG_TIMINGS.forEach(t => rowsB.push(lagContrast(t.long, lagDailyTiming(E, t.field), lagDailyTiming(C, t.field))));
+                const rowsCat = LAG_CATS.map(cat => lagContrast(cat.label,
+                    lagDailyAll(E.filter(r => cls.cats.get(r).has(cat.id))), lagDailyAll(C)));
+                return {
+                    records, cls, E, C, S, sameDayToo: !!sameDayToo,
+                    nAll: countTotalLecturas(records), nS: countTotalLecturas(S),
+                    nC: countTotalLecturas(C), nE: countTotalLecturas(E),
+                    boxAll: buildTimingBoxStatsFromRecords(records), boxS: buildTimingBoxStatsFromRecords(S),
+                    boxC: buildTimingBoxStatsFromRecords(C), boxE: buildTimingBoxStatsFromRecords(E),
+                    rowsB, rowsCat
+                };
             }
+
+            // Textos de "como se filtra" y "por que", comunes a todos los informes.
+            function lagDescribe(an) {
+                const pct = n => an.nAll ? (n / an.nAll * 100).toFixed(0) : '0';
+                const extra = an.sameDayToo ?
+                    ' Opcion activada: ademas se excluyen las lecturas con factor el mismo dia.' : '';
+                return {
+                    S: {
+                        title: 'Diagrama 1 - Filtro del mismo dia (el que ya existia)',
+                        how: 'Se excluye toda lectura cuyo propio registro (el mismo dia) tenga algun factor de confusion: ' +
+                            'contexto dietetico atipico (comida familiar/grande, restaurante, comida rapida, alcohol, evento especial, ' +
+                            'exceso de cantidad, comida saltada, otro imprevisto); fiebre, escalofrios, malestar general, nauseas o dificultad ' +
+                            'para respirar; estres, ansiedad o nerviosismo; dormir mal o poco; dosis de medicacion omitida ese dia; ' +
+                            'medicacion nueva (ultimos ' + NEW_MEDICATION_WINDOW_DAYS + ' dias) y temperatura extrema (>= ' +
+                            TEMP_EXTREME_HIGH_C + ' C o <= ' + TEMP_EXTREME_LOW_C + ' C). El resto de lecturas se conserva.',
+                        why: 'Muestra como se veria la distribucion sin los dias atipicos del propio registro, que pueden elevar o bajar ' +
+                            'la glucosa de forma puntual sin reflejar el patron de base.',
+                        count: `Conserva ${an.nS} de ${an.nAll} lecturas (${pct(an.nS)}%).`,
+                        legend: 'Gris = todas las lecturas; color = sin factores del mismo dia.'
+                    },
+                    A: {
+                        title: 'Diagrama 2 - Metodo A: exclusion por dia anterior (restriccion)',
+                        how: 'Solo se conservan las lecturas cuyo dia anterior tiene registro y NINGUNA de estas circunstancias marcadas: ' +
+                            'comida atipica o abundante, alcohol, estres/ansiedad/nerviosismo, dormir mal, fiebre/malestar/nauseas. ' +
+                            'Los dias cuyo dia anterior no tiene registro tambien se excluyen, porque no se sabe como fue ese dia.' + extra,
+                        why: 'Una comida muy grande o rica en grasa y proteina, el alcohol, dormir poco o el malestar pueden alterar la glucosa durante ' +
+                            'horas y, en algunos casos, hasta el dia siguiente. Quitar esas lecturas deja ver el patron de base. Coste: menos lecturas, y si ' +
+                            'los dias atipicos son sistematicos (p. ej. fines de semana) lo que queda puede no ser representativo.',
+                        count: `Conserva ${an.nC} de ${an.nAll} lecturas (${pct(an.nC)}%). Sin registro el dia anterior: ${an.cls.unknown.length} registro(s); ` +
+                            `con factor el dia anterior: ${an.cls.exposed.length}; sin factores: ${an.cls.clean.length}.`,
+                        legend: 'Gris = todas las lecturas; color = Metodo A.'
+                    },
+                    B: {
+                        title: 'Diagrama 3 - Metodo B: estratificacion por dia anterior (con factor frente a sin factor)',
+                        how: 'No se descarta ninguna lectura valida. Las lecturas se separan en dos grupos segun su dia anterior: "con" = al menos un ' +
+                            'factor marcado; "sin" = ninguno (los dias sin registro previo quedan fuera de ambos grupos). Se comparan usando la media de ' +
+                            'cada dia como unidad de analisis (t de Welch y U de Mann-Whitney, IC 95%) y luego se repite por tipo de factor frente al mismo ' +
+                            'grupo de referencia.' + extra,
+                        why: 'El efecto no tiene el mismo sentido en todos los factores (p. ej. el alcohol por la noche tiende a bajar la glucosa de la manana ' +
+                            'siguiente; otros factores tienden a subirla) y mezclarlos puede cancelar efectos. Separar permite ver cuanto y en que direccion ' +
+                            'cambia la glucosa en los propios datos.',
+                        count: `Grupo "con": ${an.nE} lecturas (${an.E.length} registros); grupo "sin": ${an.nC} lecturas (${an.C.length} registros).`,
+                        legend: 'Naranja = dia anterior con factor; color = dia anterior sin factores.'
+                    },
+                    caution: 'Resultados descriptivos y exploratorios: no demuestran causalidad, no se corrigen por comparaciones multiples y no modifican la ' +
+                        'severidad clinica ni las estadisticas principales. Un factor declarado un dia no implica que explique la lectura del dia siguiente. ' +
+                        'Filas con menos de ' + LAG_MIN_DAYS + ' dias en algun grupo: no interpretables.',
+                    evidence: [
+                        'Alcohol por la tarde-noche (DM1): glucosa en ayunas y tras el desayuno mas baja la manana siguiente y riesgo de hipoglucemia (Turner et al., Diabetes Care 2001;24:1888-93; 6 hombres ingresados).',
+                        'Comidas ricas en grasa y proteina: elevan la glucosa 3 a 5-6 h despues de comer (Smart et al., Diabetes Care 2013;36:3897-902; Bell et al., Diabetes Care 2015). Llega a la noche; su efecto al dia siguiente no esta demostrado directamente.',
+                        'Cena y desayuno ("efecto segunda comida"): el indice glucemico de la cena modifica la respuesta al desayuno siguiente (Stevenson et al., Eur J Clin Nutr 2008;62:608-16; n=7).',
+                        'Sueno: una sola noche de sueno parcial reduce la sensibilidad a la insulina en DM1 (Donga et al., Diabetes Care 2010;33:1573-7; pocos pacientes) sin cambiar la glucosa basal.',
+                        'Estres y emociones: evidencia mixta; en un tercio de adultos con DM1 se asocio a la glucosa del mismo dia o del siguiente, con direccion variable (Riazi et al., Diabetes Res Clin Pract 2004;66:237-44); otro estudio de diario no hallo relacion con el estres del dia previo.'
+                    ]
+                };
+            }
+
+            function lagGroupsFor(an, key, smbg) {
+                const grey = 'rgb(127,140,153)', amber = 'rgb(212,140,44)';
+                const g = [];
+                LAG_TIMINGS.forEach(t => {
+                    const band = smbg ? smbg[t.key] : null;
+                    if (key === 'B') {
+                        g.push({ label: t.label + ': con', stats: an.boxE[t.key], color: amber, refBand: band });
+                        g.push({ label: t.label + ': sin', stats: an.boxC[t.key], color: t.color, refBand: band });
+                    } else {
+                        g.push({ label: t.label + ': todas', stats: an.boxAll[t.key], color: grey, refBand: band });
+                        g.push({ label: t.label + ': ' + key, stats: key === 'S' ? an.boxS[t.key] : an.boxC[t.key],
+                            color: t.color, refBand: band });
+                    }
+                });
+                return g;
+            }
+
+            // Forest plot en canvas: diferencia de medias (con factor - sin factor) con IC 95%.
+            function drawLagForest(canvas, rows, w, h) {
+                const dpr = 2, ctx = canvas.getContext('2d');
+                canvas.width = w * dpr; canvas.height = h * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, w, h);
+                const ok = rows.filter(c => c.w && isFinite(c.w.ci[0]) && isFinite(c.w.ci[1]));
+                ctx.font = '12px Arial, sans-serif'; ctx.textBaseline = 'middle';
+                if (!ok.length) { ctx.fillStyle = '#5e7a93'; ctx.fillText('Datos insuficientes para el grafico de diferencias.', 10, h / 2); return; }
+                const m = Math.max(5, ...ok.map(c => Math.max(Math.abs(c.w.ci[0]), Math.abs(c.w.ci[1]))));
+                const L = Math.round(w * 0.34), R = w - 16, top = 14, rowH = Math.min(34, (h - 50) / ok.length);
+                const x = v => L + ((Math.max(-m, Math.min(m, v)) + m) / (2 * m)) * (R - L);
+                ctx.strokeStyle = '#8899aa'; ctx.setLineDash([4, 3]);
+                ctx.beginPath(); ctx.moveTo(x(0), top - 6); ctx.lineTo(x(0), top + rowH * ok.length); ctx.stroke(); ctx.setLineDash([]);
+                ok.forEach((c, i) => {
+                    const cy = top + rowH * i + rowH / 2, low = c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS;
+                    const col = c.w.diff > 0 ? '#b13e4b' : '#2a7a9c';
+                    ctx.globalAlpha = low ? 0.4 : 1;
+                    ctx.fillStyle = '#334'; ctx.textAlign = 'left';
+                    ctx.fillText(c.label + (low ? ' (n bajo)' : ''), 6, cy);
+                    ctx.strokeStyle = col; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(x(c.w.ci[0]), cy); ctx.lineTo(x(c.w.ci[1]), cy); ctx.stroke();
+                    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x(c.w.diff), cy, 4, 0, 6.2832); ctx.fill();
+                    ctx.globalAlpha = 1; ctx.lineWidth = 1;
+                });
+                const ay = top + rowH * ok.length + 14;
+                ctx.fillStyle = '#5e7a93'; ctx.font = '11px Arial, sans-serif';
+                ctx.textAlign = 'left'; ctx.fillText('-' + m.toFixed(0), L, ay);
+                ctx.textAlign = 'center'; ctx.fillText('0', x(0), ay);
+                ctx.textAlign = 'right'; ctx.fillText('+' + m.toFixed(0) + ' mg/dL', R, ay);
+            }
+
+            function lagRowCells(c) {
+                if (!c.w) return [c.label + (c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS ? ' (n bajo)' : ''),
+                    String(c.nE), String(c.nR), 'Datos insuficientes', '', '', '', ''];
+                const w = c.w;
+                return [c.label + (c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS ? ' (n bajo)' : ''),
+                    String(c.nE), String(c.nR), fmtNum(w.meanA), fmtNum(w.meanB),
+                    (w.diff > 0 ? '+' : '') + fmtNum(w.diff) + ' [' + fmtNum(w.ci[0]) + ', ' + fmtNum(w.ci[1]) + ']',
+                    formatP(w.p) + (c.mw ? ' / ' + formatP(c.mw.p) : ''), w.cohend === null ? '--' : w.cohend.toFixed(2)];
+            }
+            const LAG_TABLE_HEAD = ['Comparacion', 'Dias con factor', 'Dias sin factor', 'Media con', 'Media sin',
+                'Diferencia [IC 95%]', 'p Welch / MW', 'd'];
 
             function lagTableHtml(rows) {
-                return '<div class="ba-table-scroll"><table class="ba-table"><thead><tr><th>Comparacion</th>' +
-                    '<th>Dias con factor</th><th>Dias sin factor</th><th>Media con</th><th>Media sin</th>' +
-                    '<th>Diferencia [IC 95%]</th><th>p Welch / MW</th><th>d</th></tr></thead><tbody>' +
-                    rows.map(lagRowHtml).join('') + '</tbody></table></div>';
+                return '<div class="ba-table-scroll"><table class="ba-table"><thead><tr>' +
+                    LAG_TABLE_HEAD.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr></thead><tbody>' +
+                    rows.map(c => '<tr>' + lagRowCells(c).map(v => `<td>${escapeHtml(v)}</td>`).join('') + '</tr>').join('') +
+                    '</tbody></table></div>';
             }
 
-            // Grafico de bosque (CSS): diferencia de medias (mg/dL) con IC 95% por factor.
-            function lagForestHtml(cs) {
-                const rows = cs.filter(c => c.w && isFinite(c.w.ci[0]) && isFinite(c.w.ci[1]));
-                if (!rows.length) return '';
-                const m = Math.max(5, ...rows.map(c => Math.max(Math.abs(c.w.ci[0]), Math.abs(c.w.ci[1]))));
-                const pos = v => 50 + (Math.max(-m, Math.min(m, v)) / m) * 50;
-                const body = rows.map(c => {
-                    const lo = pos(c.w.ci[0]), hi = pos(c.w.ci[1]), pt = pos(c.w.diff);
-                    const col = c.w.diff > 0 ? '#b13e4b' : '#2a7a9c';
-                    const op = (c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS) ? 0.35 : 1;
-                    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">` +
-                        `<div style="flex:0 0 36%;font-size:0.75rem;">${escapeHtml(c.label)}</div>` +
-                        `<div style="position:relative;flex:1;height:16px;opacity:${op};">` +
-                        `<div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed rgba(128,128,128,0.7);"></div>` +
-                        `<div style="position:absolute;left:${lo}%;width:${Math.max(0.5, hi - lo)}%;top:7px;height:2px;background:${col};"></div>` +
-                        `<div style="position:absolute;left:calc(${pt}% - 4px);top:4px;width:8px;height:8px;border-radius:50%;background:${col};"></div>` +
-                        `</div></div>`;
-                }).join('');
-                const axis = `<div style="display:flex;gap:8px;"><div style="flex:0 0 36%;"></div>` +
-                    `<div style="flex:1;display:flex;justify-content:space-between;font-size:0.65rem;opacity:0.8;">` +
-                    `<span>-${m.toFixed(0)}</span><span>0</span><span>+${m.toFixed(0)} mg/dL</span></div></div>`;
-                return body + axis;
+            // Renderiza un canvas fuera de pantalla (para PDF / Excel) con tamano fijo.
+            function lagOffscreenBox(an, key, smbg, w, h) {
+                const cv = document.createElement('canvas');
+                const prev = boxPlotForcedSize;
+                boxPlotForcedSize = { w, h };
+                try { drawBoxPlotChart(cv, lagGroupsFor(an, key, smbg), {}); } finally { boxPlotForcedSize = prev; }
+                return cv;
+            }
+            function lagOffscreenForest(an, w, h) {
+                const cv = document.createElement('canvas');
+                drawLagForest(cv, an.rowsCat, w, h);
+                return cv;
+            }
+
+            // Objeto serializable para el JSON.
+            function lagExportObject(an) {
+                const d = lagDescribe(an);
+                const rowObj = c => ({ comparacion: c.label, diasConFactor: c.nE, diasSinFactor: c.nR,
+                    mediaCon: c.w ? c.w.meanA : null, mediaSin: c.w ? c.w.meanB : null, diferencia: c.w ? c.w.diff : null,
+                    ic95: c.w ? c.w.ci : null, pWelch: c.w ? c.w.p : null, pMannWhitney: c.mw ? c.mw.p : null,
+                    dCohen: c.w ? c.w.cohend : null, nBajo: c.nE < LAG_MIN_DAYS || c.nR < LAG_MIN_DAYS });
+                return {
+                    aviso: d.caution,
+                    filtros: { mismoDia: { titulo: d.S.title, comoSeFiltra: d.S.how, porQue: d.S.why, resultado: d.S.count },
+                        metodoA: { titulo: d.A.title, comoSeFiltra: d.A.how, porQue: d.A.why, resultado: d.A.count },
+                        metodoB: { titulo: d.B.title, comoSeFiltra: d.B.how, porQue: d.B.why, resultado: d.B.count } },
+                    lecturas: { total: an.nAll, mismoDia: an.nS, metodoA: an.nC, metodoBcon: an.nE, metodoBsin: an.nC,
+                        diaAnteriorSinRegistro: an.cls.unknown.length },
+                    comparacionMetodoB: an.rowsB.map(rowObj),
+                    porTipoDeFactor: an.rowsCat.map(rowObj),
+                    evidencia: d.evidence
+                };
+            }
+
+            // Texto explicativo bajo los diagramas de cajas ya existentes (arriba de la ventana).
+            function updateBoxFilterNotes() {
+                const d = lagDescribe({ nAll: 0, nS: 0, nC: 0, nE: 0, sameDayToo: false,
+                    cls: { unknown: [], exposed: [], clean: [] }, E: [], C: [] });
+                const txt = hideConfoundedInBoxPlots ?
+                    'Filtro activo (mismo dia). Como se filtra: ' + d.S.how + ' Por que: ' + d.S.why :
+                    'Sin filtro: se muestran todas las lecturas. Si activas la casilla de arriba se excluyen las lecturas con factor de confusion en su propio registro (mismo dia): ' +
+                    d.S.how;
+                ['timingBoxFilterNote', 'beforeAfterBoxFilterNote'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = txt;
+                });
             }
 
             function renderLagFactorsPanel(records) {
@@ -13073,95 +13268,52 @@ function shiftSampleDatasetToToday(data) {
                 if (!box || !records) return;
                 if (!records.length) { box.textContent = 'No hay registros en el rango seleccionado.'; return; }
 
-                const cls = classifyByPrevDay(records);
-                const sameOk = r => !lagAlsoSameDay || !recordHasAnyConfound(r);
-                const E = cls.exposed.filter(sameOk), C = cls.clean.filter(sameOk);
-                const nAll = countTotalLecturas(records), nC = countTotalLecturas(C);
-                const pct = nAll ? (nC / nAll * 100).toFixed(0) : '0';
-
+                const an = computeLagAnalysis(records, lagAlsoSameDay);
+                const d = lagDescribe(an);
                 const smbg = getSmbgTarget(snapshotCurrentProfile());
-                const T = [
-                    { key: 'before', label: 'Antes', long: 'Antes de comer', color: 'rgb(31,123,77)' },
-                    { key: 'after', label: 'Desp.', long: 'Despues de comer', color: 'rgb(42,111,151)' },
-                    { key: 'night', label: 'Noche', long: 'Nocturna', color: 'rgb(107,76,138)' }
-                ];
-                const boxAll = buildTimingBoxStatsFromRecords(records);
-                const boxC = buildTimingBoxStatsFromRecords(C);
-                const boxE = buildTimingBoxStatsFromRecords(E);
-                const grey = 'rgb(127,140,153)', amber = 'rgb(212,140,44)';
-                const groupsA = [], groupsB = [];
-                T.forEach(t => {
-                    const band = smbg ? smbg[t.key] : null;
-                    groupsA.push({ label: t.label + ': todas', stats: boxAll[t.key], color: grey, refBand: band });
-                    groupsA.push({ label: t.label + ': A', stats: boxC[t.key], color: t.color, refBand: band });
-                    groupsB.push({ label: t.label + ': con', stats: boxE[t.key], color: amber, refBand: band });
-                    groupsB.push({ label: t.label + ': sin', stats: boxC[t.key], color: t.color, refBand: band });
-                });
-
-                const rowsB = [lagContrast('Todas las lecturas (media diaria)', lagDailyAll(E), lagDailyAll(C))];
-                T.forEach(t => rowsB.push(lagContrast(t.long, lagDailyTiming(E, 'glucose' + t.key.charAt(0).toUpperCase() + t.key.slice(1)),
-                    lagDailyTiming(C, 'glucose' + t.key.charAt(0).toUpperCase() + t.key.slice(1)))));
-                const rowsCat = LAG_CATS.map(cat => lagContrast(cat.label,
-                    lagDailyAll(E.filter(r => cls.cats.get(r).has(cat.id))), lagDailyAll(C)));
-
                 const card = 'background:rgba(176,106,23,0.08);border-radius:8px;padding:8px 12px;margin:8px 0;';
+                const section = (k) => {
+                    const x = d[k];
+                    return `<div style="${card}"><b>${escapeHtml(x.title)}</b>` +
+                        `<p><b>Como se filtra:</b> ${escapeHtml(x.how)}</p><p><b>Por que:</b> ${escapeHtml(x.why)}</p>` +
+                        `<p><b>Resultado:</b> ${escapeHtml(x.count)}</p></div>` +
+                        (lagView[k] ?
+                            `<div class="chart-wrapper" style="height:260px;"><canvas id="lagBox${k}"></canvas></div>` +
+                            `<p class="chart-caption">${escapeHtml(x.legend)} Caja P25-P75, linea = mediana, rombo = media, bigotes = minimo-maximo real.</p>` :
+                            `<p class="chart-caption"><i>Diagrama oculto (activalo en "Diagramas de cajas visibles"). La explicacion del filtro se mantiene.</i></p>`);
+                };
+
                 box.innerHTML =
-                    `<p>Registros del rango: ${records.length}. Dia anterior sin registro (se excluyen de ambos metodos): <b>${cls.unknown.length}</b> · ` +
-                    `dia anterior con algun factor: <b>${cls.exposed.length}</b> · dia anterior sin factores: <b>${cls.clean.length}</b>.</p>` +
+                    `<p>Registros del rango: ${records.length}. Dia anterior sin registro: <b>${an.cls.unknown.length}</b> · con algun factor: ` +
+                    `<b>${an.cls.exposed.length}</b> · sin factores: <b>${an.cls.clean.length}</b>.</p>` +
+                    `<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:6px 0;"><b>Diagramas de cajas visibles:</b>` +
+                    `<label style="cursor:pointer;"><input type="checkbox" data-lagview="S" ${lagView.S ? 'checked' : ''}> 1 · Mismo dia</label>` +
+                    `<label style="cursor:pointer;"><input type="checkbox" data-lagview="A" ${lagView.A ? 'checked' : ''}> 2 · Metodo A</label>` +
+                    `<label style="cursor:pointer;"><input type="checkbox" data-lagview="B" ${lagView.B ? 'checked' : ''}> 3 · Metodo B</label></div>` +
                     `<label style="display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer;">` +
                     `<input type="checkbox" id="lagSameDayChk" ${lagAlsoSameDay ? 'checked' : ''}> ` +
-                    `Excluir tambien las lecturas con factor el mismo dia (se aplica a ambos metodos)</label>` +
-
-                    `<div style="${card}"><b>Metodo A · Exclusion por dia anterior (restriccion)</b>` +
-                    `<p><b>Como se filtra:</b> solo se conservan las lecturas cuyo dia anterior tiene registro y ninguna circunstancia marcada ` +
-                    `(comida atipica o abundante, alcohol, estres/ansiedad/nerviosismo, dormir mal, fiebre/malestar). Los dias previos sin registro ` +
-                    `tambien se excluyen porque no se sabe como fueron.</p>` +
-                    `<p><b>Por que:</b> una comida muy grande o rica en grasa/proteina, el alcohol, dormir poco o el malestar pueden alterar la glucosa ` +
-                    `durante horas y, en algunos casos, hasta el dia siguiente; quitar esas lecturas deja ver el patron de base. ` +
-                    `<b>Coste:</b> menos lecturas, y si los dias atipicos son sistematicos (p. ej. fines de semana) lo que queda puede no ser representativo.</p></div>` +
-                    `<p>Conserva <b>${nC}</b> de ${nAll} lecturas (${pct}%). Cajas: <i>todas</i> (gris) frente a <i>A</i> (color).</p>` +
-                    `<div class="chart-wrapper" style="height:260px;"><canvas id="lagBoxA"></canvas></div>` +
-
-                    `<div style="${card}"><b>Metodo B · Estratificacion: dia anterior con factor frente a sin factor</b>` +
-                    `<p><b>Como se filtra:</b> no se descarta nada. Las lecturas se separan en dos grupos segun su dia anterior (con al menos un factor / ` +
-                    `sin ninguno) y se comparan usando la media de cada dia como unidad de analisis (t de Welch y Mann-Whitney, IC 95%). ` +
-                    `Despues se repite por tipo de factor frente al mismo grupo de referencia (dias previos sin factores).</p>` +
-                    `<p><b>Por que:</b> el efecto no tiene el mismo sentido en todos los factores (el alcohol por la tarde-noche tiende a bajar la glucosa de la ` +
-                    `manana siguiente; otros factores tienden a subirla), y mezclarlos en un solo grupo puede cancelar efectos. Separar permite ver cuanto y en que ` +
-                    `direccion cambia la glucosa en tus propios datos, sin darlo por supuesto.</p></div>` +
-                    `<div class="chart-wrapper" style="height:260px;"><canvas id="lagBoxB"></canvas></div>` +
-                    `<p class="chart-caption">Cajas por momento de medicion: <i>con</i> (naranja) = dia anterior con factor, <i>sin</i> (color) = dia anterior sin factores. ` +
-                    `Mismo convenio que los demas diagramas (caja P25-P75, linea = mediana, rombo = media, bigotes = minimo-maximo real).</p>` +
-                    `<h5 class="chart-title-label">Diferencia de medias (con factor − sin factor)</h5>` +
-                    lagTableHtml(rowsB) +
-                    `<h5 class="chart-title-label">Por tipo de factor del dia anterior (los tipos pueden solaparse)</h5>` +
-                    lagTableHtml(rowsCat) +
-                    lagForestHtml(rowsCat) +
-                    `<p class="chart-caption">Rojo = glucosa mas alta tras un dia con ese factor; azul = mas baja. Los puntos tenues y las filas marcadas "(n bajo)" ` +
-                    `tienen menos de ${LAG_MIN_DAYS} dias en algun grupo y no son interpretables.</p>` +
-
-                    `<p class="chart-caption" style="color:#b06a17;font-weight:600;">Resultados descriptivos y exploratorios: no demuestran causalidad, no se corrigen ` +
-                    `por comparaciones multiples y no modifican la severidad clinica ni las estadisticas principales. Un factor declarado un dia no implica que ` +
-                    `explique la lectura del dia siguiente.</p>` +
+                    `Excluir tambien las lecturas con factor el mismo dia en los metodos A y B</label>` +
+                    section('S') + section('A') + section('B') +
+                    `<h5 class="chart-title-label">Metodo B: diferencia de medias (con factor − sin factor)</h5>` + lagTableHtml(an.rowsB) +
+                    `<h5 class="chart-title-label">Metodo B por tipo de factor del dia anterior (los tipos pueden solaparse)</h5>` + lagTableHtml(an.rowsCat) +
+                    `<div class="chart-wrapper" style="height:230px;"><canvas id="lagForest"></canvas></div>` +
+                    `<p class="chart-caption">Rojo = glucosa mas alta tras un dia con ese factor; azul = mas baja; tenue = n bajo.</p>` +
+                    `<p class="chart-caption" style="color:#b06a17;font-weight:600;">${escapeHtml(d.caution)}</p>` +
                     `<details style="margin:8px 0;"><summary style="cursor:pointer;font-weight:600;">Evidencia cientifica que justifica estos filtros</summary>` +
-                    `<ul style="margin:6px 0 0 18px;font-size:0.8rem;">` +
-                    `<li><b>Alcohol por la tarde-noche (DM1):</b> glucosa en ayunas y tras el desayuno mas baja a la manana siguiente y riesgo de hipoglucemia ` +
-                    `(Turner et al., Diabetes Care 2001;24:1888-93; 6 hombres ingresados).</li>` +
-                    `<li><b>Comidas ricas en grasa y proteina:</b> elevan la glucosa entre 3 y 5-6 h despues de comer (Smart et al., Diabetes Care 2013;36:3897-902; ` +
-                    `Bell et al., Diabetes Care 2015). Alcanza la noche; su efecto al dia siguiente no esta demostrado directamente.</li>` +
-                    `<li><b>Cena y respuesta al desayuno ("efecto segunda comida"):</b> el indice glucemico de la cena modifica la respuesta glucemica al desayuno ` +
-                    `(Stevenson et al., Eur J Clin Nutr 2008;62:608-16; n=7). En un estudio con DM2 la glucosa en ayunas no cambio.</li>` +
-                    `<li><b>Sueno:</b> una sola noche de sueno parcial reduce la sensibilidad a la insulina en DM1 (Donga et al., Diabetes Care 2010;33:1573-7; ` +
-                    `pocos pacientes), sin cambiar la glucosa basal.</li>` +
-                    `<li><b>Estres y emociones:</b> evidencia mixta. En alrededor de un tercio de adultos con DM1 el estres se asocio a la glucosa del mismo dia o ` +
-                    `del siguiente, con direccion variable (Riazi et al., Diabetes Res Clin Pract 2004;66:237-44); otro estudio de diario no hallo relacion clara con ` +
-                    `el estres del dia previo. Por eso se analiza por separado en el Metodo B.</li></ul>` +
-                    `<p style="font-size:0.8rem;">Son estudios pequenos o experimentales, la mayoria en DM1 y con efectos sobre todo en lecturas tras comer. ` +
-                    `Los filtros ayudan a interpretar los datos; no sustituyen el criterio del equipo sanitario.</p></details>`;
+                    `<ul style="margin:6px 0 0 18px;font-size:0.8rem;">${d.evidence.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>` +
+                    `<p style="font-size:0.8rem;">Estudios pequenos o experimentales, la mayoria en DM1. Los filtros ayudan a interpretar; no sustituyen el criterio del equipo sanitario.</p></details>`;
 
-                const cA = document.getElementById('lagBoxA'), cB = document.getElementById('lagBoxB');
-                if (cA) drawBoxPlotChart(cA, groupsA, {});
-                if (cB) drawBoxPlotChart(cB, groupsB, {});
+                ['S', 'A', 'B'].forEach(k => {
+                    const cv = document.getElementById('lagBox' + k);
+                    if (cv) drawBoxPlotChart(cv, lagGroupsFor(an, k, smbg), {});
+                });
+                const fc = document.getElementById('lagForest');
+                if (fc) drawLagForest(fc, an.rowsCat, Math.max(300, fc.parentElement.clientWidth || 600), 230);
+                box.querySelectorAll('input[data-lagview]').forEach(cb => cb.addEventListener('change', () => {
+                    lagView[cb.dataset.lagview] = cb.checked;
+                    try { safeStorageSet(LAG_VIEW_KEY, JSON.stringify(lagView)); } catch (e) { /* ignorar */ }
+                    renderLagFactorsPanel();
+                }));
                 const chk = document.getElementById('lagSameDayChk');
                 if (chk) chk.addEventListener('change', () => { lagAlsoSameDay = chk.checked; renderLagFactorsPanel(); });
             }
@@ -13330,6 +13482,8 @@ function shiftSampleDatasetToToday(data) {
                 } catch (e) {
                     confoundInsightsText.textContent = 'Error al analizar los factores de confusion: ' + e.message;
                 }
+
+                updateBoxFilterNotes();
 
                 // Factores declarados el dia anterior (metodos A y B)
                 try {
@@ -14103,7 +14257,9 @@ function shiftSampleDatasetToToday(data) {
                     },
                     weatherInsights: analyzeWeatherInfluence(records),
                     moodInsights: analyzeMoodInfluence(records),
-                    anovaResults: performAnovaAnalysis(records)
+                    anovaResults: performAnovaAnalysis(records),
+                    analisisDiaAnterior: (function () { try { return lagExportObject(computeLagAnalysis(records, lagAlsoSameDay)); } catch (e) { return { error: e.message }; } })(),
+                    descripcionFiltrosDiagramasCajas: { filtroMismoDiaActivo: hideConfoundedInBoxPlots, texto: (function () { const d = lagDescribe({ nAll: 0, nS: 0, nC: 0, nE: 0, sameDayToo: false, cls: { unknown: [], exposed: [], clean: [] }, E: [], C: [] }); return d.S.how; })() }
                 };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -14149,6 +14305,8 @@ function shiftSampleDatasetToToday(data) {
                 { id: 'animo', group: 'Factores que influyen', label: 'Influencia del estado de animo' },
                 { id: 'dieta', group: 'Factores que influyen', label: 'Adherencia al plan y contexto dietetico' },
                 { id: 'confusion', group: 'Factores que influyen', label: 'Factores de confusion detectados' },
+                { id: 'lag', group: 'Factores que influyen', label: 'Factores del dia anterior: metodos A y B',
+                    hint: 'Tres diagramas de cajas, tablas, como se filtra cada uno y evidencia cientifica' },
                 { id: 'conf_desglose', group: 'Factores que influyen', label: 'Lecturas afectadas: evitables o no',
                     hint: 'Porcentajes, tabla por factor y que puede ayudar' },
                 { id: 'conf_detalle', group: 'Factores que influyen', label: 'Detalle de lecturas con factor de confusion',
@@ -14179,15 +14337,15 @@ function shiftSampleDatasetToToday(data) {
                 { id: 'cambio_tratamiento', group: 'Segun el objetivo', label: 'Cambio de tratamiento',
                     desc: 'Para valorar el efecto de un cambio de medicacion: compara dos periodos e incluye lo necesario para interpretarlo (tomas omitidas, medicacion nueva y otros factores de confusion). Si aun no hay periodos definidos, la ventana te ayuda a prepararlos.',
                     sections: ['paciente', 'medicamentos', 'presion', 'estadisticas', 'cajas', 'tir', 'calidad', 'antes_despues',
-                        'confusion', 'conf_desglose', 'problemas'] },
+                        'confusion', 'lag', 'conf_desglose', 'problemas'] },
                 { id: 'seguridad', group: 'Segun el objetivo', label: 'Episodios y seguridad',
                     desc: 'Para revisar hipoglucemias y episodios de riesgo: valores extremos, tiempo por debajo del rango, evolucion dia a dia, problemas detectados y las lecturas afectadas por factores de confusion.',
                     sections: ['paciente', 'medicamentos', 'presion', 'estadisticas', 'cajas', 'tir', 'g_glucosa', 'g_tir_dia',
-                        'calidad', 'confusion', 'conf_desglose', 'conf_detalle', 'problemas'] },
+                        'calidad', 'confusion', 'lag', 'conf_desglose', 'conf_detalle', 'problemas'] },
                 { id: 'habitos', group: 'Segun el objetivo', label: 'Patrones y habitos',
                     desc: 'Para educacion diabetologica o dietetica: como influyen la comida, el animo, el clima, el sueno y la medicacion. Incluye el listado de registros, que recoge ejercicio, dieta y comentarios.',
                     sections: ['paciente', 'medicamentos', 'presion', 'estadisticas', 'cajas', 'tir', 'g_glucosa', 'g_periodo',
-                        'g_tendencia', 'calidad', 'clima', 'animo', 'dieta', 'confusion', 'conf_desglose',
+                        'g_tendencia', 'calidad', 'clima', 'animo', 'dieta', 'confusion', 'lag', 'conf_desglose',
                         'conf_detalle', 'correlaciones', 'registros'] }
             ];
 
@@ -15532,6 +15690,9 @@ function shiftSampleDatasetToToday(data) {
 
                                 doc.setFontSize(8);
                                 doc.setFont(undefined, 'italic');
+                                addText('Como se filtra: la version "Todas las lecturas" no aplica ningun filtro. La version "Excluyendo lecturas con factor de confusion conocido" quita toda lectura cuyo propio registro (mismo dia) tenga algun factor: ' + lagDescribe({ nAll: 0, nS: 0, nC: 0, nE: 0, sameDayToo: false, cls: { unknown: [], exposed: [], clean: [] }, E: [], C: [] }).S.how, 8, 'italic');
+                                doc.setFontSize(8);
+                                doc.setFont(undefined, 'italic');
                                 const capLines = doc.splitTextToSize(sanitizeForPDF(
                                     'Caja: percentil 25 a 75 (interpolacion lineal). Linea central: mediana. Rombo: media. Bigotes: minimo y maximo reales observados (sin recortar valores atipicos). Banda verde discontinua: objetivo de referencia de cada momento de medicion. Comparar ambas versiones ayuda a ver si los factores de confusion registrados estan desplazando la distribucion global de las lecturas.'
                                     ), pageWidth - 2 * margin);
@@ -15982,6 +16143,9 @@ function shiftSampleDatasetToToday(data) {
 
                                         doc.setFontSize(8);
                                         doc.setFont(undefined, 'italic');
+                                        addText('Como se filtra: la version completa no aplica ningun filtro. La version filtrada excluye, en AMBOS periodos, las lecturas cuyo propio registro (mismo dia) tenga algun factor de confusion: ' + lagDescribe({ nAll: 0, nS: 0, nC: 0, nE: 0, sameDayToo: false, cls: { unknown: [], exposed: [], clean: [] }, E: [], C: [] }).S.how, 8, 'italic');
+                                        doc.setFontSize(8);
+                                        doc.setFont(undefined, 'italic');
                                         const capLines2 = doc.splitTextToSize(sanitizeForPDF(
                                             'Seis cajas: los tres momentos de medicion en cada uno de los dos periodos comparados. Mismo convenio que el diagrama anterior (caja = P25-P75, linea = mediana, rombo = media, bigotes = minimo-maximo real). Comparar ambas versiones ayuda a distinguir un cambio real del efecto de circunstancias puntuales.'
                                             ), pageWidth - 2 * margin);
@@ -16079,6 +16243,64 @@ function shiftSampleDatasetToToday(data) {
                             }
                         }
                         y += 4;
+                    }
+
+                    if (want('lag')) {
+                        // ---- Factores del dia anterior: 3 diagramas de cajas + metodo B + explicacion de los filtros ----
+                        try {
+                            const anLag = computeLagAnalysis(records, lagAlsoSameDay);
+                            const dLag = lagDescribe(anLag);
+                            const smbgLag = getSmbgTarget(profileForPdfTir);
+                            const imgW = pageWidth - 2 * margin, imgH = imgW * 0.5;
+                            doc.addPage();
+                            y = margin;
+                            doc.setFontSize(14);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('Factores del dia anterior: como se filtran los datos', margin, y);
+                            y += 7;
+                            addText('Los tres diagramas siguientes muestran la misma glucosa con tres filtros distintos. Cada uno se explica antes de su grafico: que lecturas se excluyen o separan y por que. Son analisis informativos: no modifican la severidad clinica ni las estadisticas principales del informe.', 9, 'italic');
+                            for (const k of ['S', 'A', 'B']) {
+                                const x = dLag[k];
+                                ensureSpace(imgH + 55);
+                                addText(x.title, 11, 'bold');
+                                addText('Como se filtra: ' + x.how, 9);
+                                addText('Por que: ' + x.why, 9);
+                                addText('Resultado: ' + x.count, 9, 'bold');
+                                ensureSpace(imgH + 12);
+                                const cvLag = lagOffscreenBox(anLag, k, smbgLag, 900, 450);
+                                doc.addImage(cvLag.toDataURL('image/png'), 'PNG', margin, y, imgW, imgH);
+                                y += imgH + 3;
+                                addText(x.legend + ' Caja P25-P75, linea = mediana, rombo = media, bigotes = minimo-maximo real. Banda verde = objetivo de referencia.', 8, 'italic');
+                                y += 3;
+                            }
+                            const tableFor = (title, rows) => {
+                                ensureSpace(40);
+                                addText(title, 11, 'bold');
+                                if (typeof doc.autoTable === 'function') {
+                                    doc.autoTable({
+                                        head: [LAG_TABLE_HEAD], body: rows.map(c => lagRowCells(c).map(v => sanitizeForPDF(v))),
+                                        startY: y, margin: { left: margin, right: margin },
+                                        styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [11, 59, 92] }
+                                    });
+                                    y = doc.lastAutoTable.finalY + 6;
+                                }
+                            };
+                            tableFor('Metodo B: diferencia de medias (con factor - sin factor), por momento de medicion', anLag.rowsB);
+                            tableFor('Metodo B por tipo de factor del dia anterior (los tipos pueden solaparse)', anLag.rowsCat);
+                            const fcv = lagOffscreenForest(anLag, 900, 400);
+                            ensureSpace(imgW * 400 / 900 + 6);
+                            doc.addImage(fcv.toDataURL('image/png'), 'PNG', margin, y, imgW, imgW * 400 / 900);
+                            y += imgW * 400 / 900 + 3;
+                            addText('Rojo = glucosa mas alta tras un dia con ese factor; azul = mas baja; tenue = menos de ' + LAG_MIN_DAYS + ' dias en algun grupo (no interpretable).', 8, 'italic');
+                            addText(dLag.caution, 9, 'bold');
+                            ensureSpace(20);
+                            addText('Evidencia cientifica que justifica estos filtros', 11, 'bold');
+                            for (const ev of dLag.evidence) addText('- ' + ev, 8.5);
+                            addText('Estudios pequenos o experimentales, la mayoria en diabetes tipo 1. Los filtros ayudan a interpretar los datos; no sustituyen el criterio del equipo sanitario.', 8, 'italic');
+                            y += 4;
+                        } catch (e) {
+                            console.warn('Error añadiendo factores del dia anterior al PDF:', e);
+                        }
                     }
 
                     if (want('conf_desglose') || want('conf_detalle')) {
@@ -17155,6 +17377,7 @@ function shiftSampleDatasetToToday(data) {
                 if (hideConfoundedBeforeAfterEl) hideConfoundedBeforeAfterEl.checked = checked;
                 renderTimingBoxPlot();
                 renderBeforeAfterBoxPlot();
+                updateBoxFilterNotes();
             }
             if (hideConfoundedTimingEl) {
                 hideConfoundedTimingEl.addEventListener('change', () =>
