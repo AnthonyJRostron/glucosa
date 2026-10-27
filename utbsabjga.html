@@ -3356,6 +3356,10 @@
                     </select>
                 </div>
             </div>
+            <p style="font-size:0.72rem;color:#6a8aa5;margin:-6px 0 10px;">
+                Las lecturas anteriores se conservan; si repites una lectura, se guarda por separado. Usa
+                «Editar» en el historial para corregir un registro existente.
+            </p>
 
             <div class="grid-3">
                 <div class="form-group">
@@ -10365,13 +10369,10 @@ function shiftSampleDatasetToToday(data) {
                 if (glucoseNightGroup) glucoseNightGroup.style.display = recordMeal.value === 'nighttime' ? '' : 'none';
             }
 
-            let autoLoadedEditId = null;
-
             function editRecord(id) {
                 const r = state.records.find(rec => rec.id === id);
                 if (!r) { toast('Registro no encontrado', 'error'); return; }
                 state.editingId = id;
-                autoLoadedEditId = null;
                 recordDate.value = r.date || todayStr();
                 recordMeal.value = r.meal || 'breakfast';
                 glucoseBefore.value = r.glucoseBefore !== null ? r.glucoseBefore : '';
@@ -10431,36 +10432,6 @@ function shiftSampleDatasetToToday(data) {
                 renderRecordMedicines();
                 saveRecordBtn.textContent = 'Guardar medicion';
                 saveRecordBtn.style.background = '';
-            }
-
-            // ---------- CARGA AUTOMATICA AL CAMBIAR FECHA/COMIDA ----------
-            // Si al elegir una fecha (y comida) en el formulario ya existe un
-            // registro para esa combinacion, se carga automaticamente en modo
-            // edicion en vez de dejar que el paciente cree sin querer un
-            // duplicado. Solo actua mientras el formulario esta en modo "nuevo"
-            // o mientras el registro cargado lo trajo esta misma funcion
-            // (autoLoadedEditId): si el paciente pulso "Editar" a mano en la
-            // tabla y luego cambia la fecha a proposito (por ejemplo, para mover
-            // ese registro a otro dia), no interferimos con su edicion en curso.
-            function checkRecordSlotForDateMeal() {
-                const date = recordDate.value;
-                const meal = recordMeal.value;
-                if (!date) return;
-
-                if (state.editingId !== null && state.editingId !== autoLoadedEditId) return;
-
-                const match = state.records.find(r => r.date === date && r.meal === meal);
-                if (match) {
-                    if (state.editingId !== match.id) {
-                        editRecord(match.id);
-                        autoLoadedEditId = match.id;
-                        toast(`Ya hay un registro para ${formatDate(date)} (${mealLabel(meal)}). Se ha cargado para editarlo.`,
-                            'info');
-                    }
-                } else if (state.editingId !== null) {
-                    resetForm(date, meal);
-                    autoLoadedEditId = null;
-                }
             }
 
             // ---------- VALIDATION ----------
@@ -10538,37 +10509,6 @@ function shiftSampleDatasetToToday(data) {
                     weather: weather,
                 };
 
-                // Evitar duplicados por fecha+comida: si el formulario esta en modo
-                // "nuevo" pero ya existe un registro para esta fecha y comida (por
-                // ejemplo, se guardo antes solo la lectura "antes de comer" y ahora
-                // se añade la de "despues"), se actualiza ESE registro en vez de
-                // crear uno duplicado. Sin esto, cada guardado creaba un registro
-                // nuevo y, al tener medicamentos configurados, el aviso de
-                // medicacion volvia a preguntar y se guardaba una segunda toma para
-                // la misma comida. Los campos de glucosa que el formulario deja
-                // vacios se rellenan con lo que ya tenia guardado ese registro, para
-                // no borrar por accidente una lectura previamente introducida (por
-                // ejemplo, la de "antes de comer" al venir ahora solo a añadir la de
-                // "despues").
-                let existingForSlot = null;
-                if (!state.editingId) {
-                    existingForSlot = state.records.find(r => r.date === date && r.meal === meal) || null;
-                    if (existingForSlot) {
-                        if (data.glucoseBefore === null && existingForSlot.glucoseBefore !== null &&
-                            existingForSlot.glucoseBefore !== undefined) {
-                            data.glucoseBefore = existingForSlot.glucoseBefore;
-                        }
-                        if (data.glucoseAfter === null && existingForSlot.glucoseAfter !== null &&
-                            existingForSlot.glucoseAfter !== undefined) {
-                            data.glucoseAfter = existingForSlot.glucoseAfter;
-                        }
-                        if (data.glucoseNight === null && existingForSlot.glucoseNight !== null &&
-                            existingForSlot.glucoseNight !== undefined) {
-                            data.glucoseNight = existingForSlot.glucoseNight;
-                        }
-                    }
-                }
-
                 const errors = validateRecord(data, beforeVal, afterVal, nightVal);
                 if (errors.length > 0) {
                     errors.forEach(e => toast(e, 'error'));
@@ -10576,15 +10516,40 @@ function shiftSampleDatasetToToday(data) {
                     if (!confirm(errors.join('\n') + '\n\nDeseas guardar de todas formas?')) return;
                 }
 
-                if (existingForSlot) {
-                    state.editingId = existingForSlot.id;
-                    autoLoadedEditId = existingForSlot.id;
-                    // El formulario estaba en modo "nuevo" (casillas de medicacion
-                    // vacias por defecto): se restaura el cumplimiento que ya se
-                    // habia guardado con el registro existente, para no perderlo al
-                    // fusionar esta lectura con el (p. ej. al añadir "despues" a un
-                    // registro que ya tenia "antes" con su medicacion confirmada).
-                    applyMedicationComplianceToForm(existingForSlot);
+                // Combine complementary readings for a patient/date/meal, but
+                // never replace a value that was already recorded in that slot.
+                let existingForSlot = null;
+                if (!state.editingId) {
+                    const readingFields = ['glucoseBefore', 'glucoseAfter', 'glucoseNight'];
+                    existingForSlot = state.records.slice().reverse().find(record =>
+                        record.patientId === state.currentPatientId &&
+                        record.date === date &&
+                        record.meal === meal &&
+                        !readingFields.some(field =>
+                            data[field] !== null && record[field] !== null && record[field] !== undefined)
+                    ) || null;
+
+                    if (existingForSlot) {
+                        readingFields.forEach(field => {
+                            if (data[field] === null && existingForSlot[field] !== null &&
+                                existingForSlot[field] !== undefined) {
+                                data[field] = existingForSlot[field];
+                            }
+                        });
+                        data.exercise = data.exercise || existingForSlot.exercise;
+                        data.comments = data.comments || existingForSlot.comments || '';
+                        if (data.moods.length === 1 && data.moods[0] === 'normal' &&
+                            Array.isArray(existingForSlot.moods)) {
+                            data.moods = existingForSlot.moods;
+                        }
+                        if (data.dietContext.length === 0 && Array.isArray(existingForSlot.dietContext)) {
+                            data.dietContext = existingForSlot.dietContext;
+                        }
+                        data.weather = data.weather || existingForSlot.weather;
+                        data.profile = existingForSlot.profile;
+                        state.editingId = existingForSlot.id;
+                        applyMedicationComplianceToForm(existingForSlot);
+                    }
                 }
 
                 const sevBefore = getSeverity(data.glucoseBefore);
@@ -15892,8 +15857,6 @@ function shiftSampleDatasetToToday(data) {
                 updatePregnancyCategoryVisibility);
             if (customTargetEnabled) customTargetEnabled.addEventListener('change', updateCustomTargetVisibility);
             saveRecordBtn.addEventListener('click', handleSaveRecord);
-            recordDate.addEventListener('change', checkRecordSlotForDateMeal);
-            recordMeal.addEventListener('change', checkRecordSlotForDateMeal);
             if (editTodayRecordBtn) editTodayRecordBtn.addEventListener('click', editTodayRecord);
             recordMeal.addEventListener('change', updateNightGlucoseVisibility);
             recordMeal.addEventListener('change', updateAutoMedTimesForMeal);
@@ -16148,7 +16111,6 @@ function shiftSampleDatasetToToday(data) {
                     const date = btn.getAttribute('data-missing-date');
                     closeMissingDaysModal();
                     recordDate.value = date;
-                    checkRecordSlotForDateMeal();
                     const recordSection = document.getElementById('recordDate');
                     if (recordSection) recordSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     toast(`Fecha ${formatDate(date)} preseleccionada. Completa y guarda la medicion.`, 'info');
