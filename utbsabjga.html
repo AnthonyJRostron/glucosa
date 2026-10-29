@@ -2933,6 +2933,23 @@
         html.dark-theme .bp-stat-card { background: #1a2633; border-color: #2c3e4d; }
         html.dark-theme .bp-stat-card .bp-stat-value { color: #dfeaf5; }
         html.dark-theme .bp-legend { color: #dfeaf5; }
+        /* ---- Tabla de lecturas del dia (7 filas) ---- */
+        .glucose-slots-wrap { overflow-x: auto; margin: 4px 0 10px; }
+        .glucose-slots-table { width: 100%; max-width: 560px; border-collapse: collapse; font-size: 0.9rem; }
+        .glucose-slots-table th { text-align: left; padding: 8px 10px; background: #eef4f9; color: #0b3b5c; font-size: 0.78rem; border-bottom: 2px solid #d8e4ee; }
+        .glucose-slots-table td { padding: 6px 10px; border-bottom: 1px solid #e3ecf3; vertical-align: middle; }
+        .glucose-slots-table tr.slot-group-start td { border-top: 2px solid #c9d9e6; }
+        .glucose-slots-table td.slot-label { font-weight: 600; color: #0b3b5c; }
+        .glucose-slots-table td.slot-label .range-hint { font-weight: 400; margin-left: 4px; }
+        .glucose-slots-table input[type="number"] { width: 140px; max-width: 100%; }
+        .slots-hint { font-size: 0.72rem; color: #6a8aa5; margin: 0 0 8px; }
+        .slots-notice { font-size: 0.75rem; color: #8a5a00; background: #fff4dc; border: 1px solid #f0d9a0; border-radius: 6px; padding: 6px 10px; margin: 0 0 10px; }
+        html.dark-theme .glucose-slots-table th { background: #1f2f3d; color: #c8d8e5; border-bottom-color: #40576a; }
+        html.dark-theme .glucose-slots-table td { border-bottom-color: #33485a; }
+        html.dark-theme .glucose-slots-table tr.slot-group-start td { border-top-color: #40576a; }
+        html.dark-theme .glucose-slots-table td.slot-label { color: #c8d8e5; }
+        html.dark-theme .slots-notice { background: #3a3220; border-color: #6b5a2a; color: #f0d9a0; }
+
     </style>
 </head>
 <body>
@@ -3341,39 +3358,53 @@
         <!-- RECORD FORM -->
         <section id="recordFormSection">
             <h2>Registrar medicion <span class="badge">nuevo</span></h2>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>Fecha</label>
-                    <input type="date" id="recordDate">
-                </div>
-                <div class="form-group">
-                    <label>Hora / momento</label>
-                    <select id="recordMeal">
-                        <option value="breakfast">Desayuno</option>
-                        <option value="lunch">Almuerzo / Comida</option>
-                        <option value="dinner">Cena</option>
-                        <option value="nighttime">Nocturna (antes de dormir)</option>
-                    </select>
-                </div>
+            <div class="form-group" style="max-width:260px;">
+                <label>Fecha</label>
+                <input type="date" id="recordDate">
             </div>
-            <p style="font-size:0.72rem;color:#6a8aa5;margin:-6px 0 10px;">
-                Las lecturas anteriores se conservan; si repites una lectura, se guarda por separado. Usa
-                «Editar» en el historial para corregir un registro existente.
+            <p class="slots-hint">
+                Rellena solo las lecturas que tengas: las filas vacias no se guardan y no es obligatorio
+                introducir ninguna. Puedes volver a esta fecha mas tarde para anadir las que falten. Las
+                lecturas ya guardadas de la fecha elegida aparecen en la tabla y se pueden corregir o borrar
+                (dejando la casilla vacia).
             </p>
-
-            <div class="grid-3">
-                <div class="form-group">
-                    <label>Glucosa antes (mg/dL) <span class="range-hint">(70-100 en ayunas)</span></label>
-                    <input type="number" id="glucoseBefore" placeholder="ej. 95" min="20" max="600">
-                </div>
-                <div class="form-group">
-                    <label>Glucosa despues (mg/dL) <span class="range-hint">(&lt;140 postprandial)</span></label>
-                    <input type="number" id="glucoseAfter" placeholder="ej. 140" min="20" max="600">
-                </div>
-                <div class="form-group" id="glucoseNightGroup" style="display: none;">
-                    <label>Glucosa nocturna (mg/dL) <span class="range-hint">(70-100)</span></label>
-                    <input type="number" id="glucoseNight" placeholder="ej. 110" min="20" max="600">
-                </div>
+            <div id="slotsDayNotice" class="slots-notice" style="display:none;"></div>
+            <div class="glucose-slots-wrap">
+                <table class="glucose-slots-table" id="glucoseSlotsTable">
+                    <thead>
+                        <tr><th>Momento</th><th>Glucosa (mg/dL)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr class="slot-group-start">
+                            <td class="slot-label"><label for="slot-breakfast-before">Antes del desayuno</label> <span class="range-hint">(70-100 en ayunas)</span></td>
+                            <td><input type="number" id="slot-breakfast-before" data-slot="breakfast-before" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                        <tr>
+                            <td class="slot-label"><label for="slot-breakfast-after">Despues del desayuno</label> <span class="range-hint">(&lt;140 postprandial)</span></td>
+                            <td><input type="number" id="slot-breakfast-after" data-slot="breakfast-after" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                        <tr class="slot-group-start">
+                            <td class="slot-label"><label for="slot-lunch-before">Antes de la comida</label></td>
+                            <td><input type="number" id="slot-lunch-before" data-slot="lunch-before" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                        <tr>
+                            <td class="slot-label"><label for="slot-lunch-after">Despues de la comida</label> <span class="range-hint">(&lt;140 postprandial)</span></td>
+                            <td><input type="number" id="slot-lunch-after" data-slot="lunch-after" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                        <tr class="slot-group-start">
+                            <td class="slot-label"><label for="slot-dinner-before">Antes de la cena</label></td>
+                            <td><input type="number" id="slot-dinner-before" data-slot="dinner-before" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                        <tr>
+                            <td class="slot-label"><label for="slot-dinner-after">Despues de la cena</label> <span class="range-hint">(&lt;140 postprandial)</span></td>
+                            <td><input type="number" id="slot-dinner-after" data-slot="dinner-after" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                        <tr class="slot-group-start">
+                            <td class="slot-label"><label for="slot-night">Noche (antes de dormir)</label> <span class="range-hint">(70-100)</span></td>
+                            <td><input type="number" id="slot-night" data-slot="night" placeholder="mg/dL" min="20" max="600" inputmode="numeric"></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             <div class="record-medicine-box" id="recordMedicineBox" style="">
                 <h3>Medicamentos de esta medicion</h3>
@@ -4541,11 +4572,24 @@
             const weatherCheckBtn = $('weatherCheckBtn');
             const weatherCheckReset = $('weatherCheckReset');
             const recordDate = $('recordDate');
-            const recordMeal = $('recordMeal');
-            const glucoseBefore = $('glucoseBefore');
-            const glucoseAfter = $('glucoseAfter');
-            const glucoseNight = $('glucoseNight');
-            const glucoseNightGroup = $('glucoseNightGroup');
+            // Tabla de lecturas: 7 filas. Cada fila escribe en un campo del registro de su
+            // momento (desayuno/comida/cena/nocturna); no se guarda hora, solo la fecha.
+            const SLOT_DEFS = [
+                { key: 'breakfast-before', meal: 'breakfast', field: 'glucoseBefore', label: 'Antes del desayuno' },
+                { key: 'breakfast-after', meal: 'breakfast', field: 'glucoseAfter', label: 'Despues del desayuno' },
+                { key: 'lunch-before', meal: 'lunch', field: 'glucoseBefore', label: 'Antes de la comida' },
+                { key: 'lunch-after', meal: 'lunch', field: 'glucoseAfter', label: 'Despues de la comida' },
+                { key: 'dinner-before', meal: 'dinner', field: 'glucoseBefore', label: 'Antes de la cena' },
+                { key: 'dinner-after', meal: 'dinner', field: 'glucoseAfter', label: 'Despues de la cena' },
+                { key: 'night', meal: 'nighttime', field: 'glucoseNight', label: 'Noche' }
+            ];
+            const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'nighttime'];
+            const NODATA_MEAL = 'nodata'; // dia guardado sin ninguna lectura de glucosa
+            const glucoseSlotInputs = {};
+            SLOT_DEFS.forEach(s => { glucoseSlotInputs[s.key] = $('slot-' + s.key); });
+            let loadedFormDate = null;
+            let formPatientId = null;
+            let slotsDirty = false;
             const exerciseType = $('exerciseType');
             const exerciseDuration = $('exerciseDuration');
             const exerciseSteps = $('exerciseSteps');
@@ -5367,6 +5411,13 @@ const MEAL_DEFAULT_TIMES = {
 function getMealDefaultTime(mealValue) {
     return MEAL_DEFAULT_TIMES[mealValue] || '09:00';
 }
+// Hora actual (HH:MM): hora de partida de la toma de un medicamento que no
+// tiene hora predeterminada propia (ya no hay "momento" en el formulario).
+function currentTimeHHMM() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
 
 // Devuelve una fecha (objeto Date) para HOY con la hora predeterminada del
 // medicamento aplicada, o la hora actual si el medicamento aun no tiene
@@ -5415,13 +5466,12 @@ function renderRecordMedicines() {
     if (!recordMedicineBox || !recordMedicineList) return;
     recordMedicineBox.style.display = currentPatient ? '' : 'none';
     renderRecordMedicineCatalog();
-    const currentMealValue = recordMeal ? recordMeal.value : 'breakfast';
     recordMedicineList.innerHTML = myMeds.map(m => {
         const medId = escapeAttrMed(m.id);
         const dose = m.dosisPredeterminada || '';
         const unit = m.unidadPredeterminada || m.unidad || 'mg';
         const hasOwnDefaultTime = !!m.horaPredeterminada;
-        const defaultTime = m.horaPredeterminada || getMealDefaultTime(currentMealValue);
+        const defaultTime = m.horaPredeterminada || currentTimeHHMM();
         return `<div class="record-med-row">
             <label><input type="checkbox" data-record-med-taken="${medId}"> ${m.riesgo_hipo ? '<span class="hipo-dot-med"></span>' : ''}${escapeHtmlMed(m.nombre)}</label>
             <span class="record-med-dose-label">Dosis</span>
@@ -5486,13 +5536,6 @@ function renderRecordMedicines() {
 // campo de hora no se ha tocado a mano en este formulario (data-auto-time
 // sigue en "true"). Los medicamentos con hora predeterminada propia, o cuya
 // hora ya se edito manualmente, no se tocan.
-function updateAutoMedTimesForMeal() {
-    if (!recordMedicineList || !recordMeal) return;
-    const newTime = getMealDefaultTime(recordMeal.value);
-    recordMedicineList.querySelectorAll('[data-record-med-time][data-auto-time="true"]').forEach(input => {
-        input.value = newTime;
-    });
-}
 
 function renderRecordMedicineCatalog() {
     if (!recordMedicineCatalog || !recordMedicineSearch) return;
@@ -5565,7 +5608,7 @@ function collectRecordMedicationLogs(date) {
         // medicamento / momento del dia si por lo que sea el campo esta
         // vacio. Nunca se deja a una hora fija arbitraria (antes: 12:00).
         const timeVal = (timeInput && timeInput.value) ? timeInput.value :
-            (m.horaPredeterminada || getMealDefaultTime(recordMeal ? recordMeal.value : 'breakfast'));
+            (m.horaPredeterminada || currentTimeHHMM());
         return [{
             id: 'mlog-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
             medId: m.id,
@@ -5934,7 +5977,7 @@ function addMedicationLog(medId, omitida) {
             }
 
             function mealLabel(val) {
-                const map = { breakfast: 'Desayuno', lunch: 'Comida', dinner: 'Cena', nighttime: 'Nocturna' };
+                const map = { breakfast: 'Desayuno', lunch: 'Comida', dinner: 'Cena', nighttime: 'Nocturna', nodata: 'Sin lecturas' };
                 return map[val] || val;
             }
 
@@ -8130,6 +8173,8 @@ function addMedicationLog(medId, omitida) {
 
             // ---------- CALIDAD DE DATOS ----------
             function computeDataQuality(records) {
+                // Los dias guardados sin lecturas (meal 'nodata') no cuentan como registros de glucosa.
+                records = (records || []).filter(r => r.meal !== NODATA_MEAL);
                 const totalRecords = records.length;
                 const totalLecturas = countTotalLecturas(records);
                 const days = countDistinctDays(records);
@@ -9305,6 +9350,11 @@ function addMedicationLog(medId, omitida) {
 
             // ---------- SELECTOR DE PACIENTES ----------
             function renderPatientSelect() {
+                renderPatientSelectBase();
+                syncRecordFormIfPatientChanged();
+            }
+
+            function renderPatientSelectBase() {
                 if (!patientSelect) return;
                 patientSelect.innerHTML = state.patients.map(p => {
                     const label = p.name ? p.name : '(Paciente sin nombre)';
@@ -10317,6 +10367,7 @@ function shiftSampleDatasetToToday(data) {
                 state.records = state.records.filter(r => r.id !== id);
                 saveState();
                 renderRecords();
+                if (!slotsDirty) loadDayIntoForm(recordDate.value || todayStr());
                 toast('Registro eliminado', 'info');
             }
 
@@ -10365,43 +10416,121 @@ function shiftSampleDatasetToToday(data) {
                 editRecord(latestRecord.id);
             }
 
-            function updateNightGlucoseVisibility() {
-                if (glucoseNightGroup) glucoseNightGroup.style.display = recordMeal.value === 'nighttime' ? '' : 'none';
+            // ---------- TABLA DE LECTURAS DEL DIA ----------
+            function recordTimestamp(r) {
+                const t = r && r.createdAt ? new Date(r.createdAt).getTime() : 0;
+                return isNaN(t) ? 0 : t;
+            }
+
+            // Para una fecha devuelve, por momento, el registro "propietario" (el mas reciente) que
+            // muestra y edita la tabla, y aparte el resto (duplicados u otros valores de meal), que
+            // se conservan sin tocar.
+            function getDayRecordSet(date) {
+                const owners = {};
+                const others = [];
+                state.records
+                    .filter(r => r.patientId === state.currentPatientId && r.date === date)
+                    .forEach(r => {
+                        const valid = MEAL_ORDER.includes(r.meal) || r.meal === NODATA_MEAL;
+                        if (!valid) { others.push(r); return; }
+                        const cur = owners[r.meal];
+                        if (!cur) { owners[r.meal] = r; return; }
+                        if (recordTimestamp(r) >= recordTimestamp(cur)) { others.push(cur); owners[r.meal] = r; }
+                        else { others.push(r); }
+                    });
+                return { owners, others };
+            }
+
+            function getOwnerList(set) {
+                return [...MEAL_ORDER, NODATA_MEAL].map(m => set.owners[m]).filter(Boolean);
+            }
+
+            function loadDayIntoForm(date) {
+                const d = date || todayStr();
+                recordDate.value = d;
+                loadedFormDate = d;
+                formPatientId = state.currentPatientId;
+                slotsDirty = false;
+                state.editingId = null;
+
+                const set = getDayRecordSet(d);
+                const ownerList = getOwnerList(set);
+
+                SLOT_DEFS.forEach(s => {
+                    const rec = set.owners[s.meal];
+                    const v = rec ? numericValue(rec[s.field]) : null;
+                    glucoseSlotInputs[s.key].value = v === null ? '' : String(v);
+                });
+
+                // Bloque compartido (ejercicio, comentarios, animo, contexto de comida, medicacion):
+                // se combina lo guardado en los registros del dia.
+                const exRec = ownerList.find(r => r.exercise && !r.exerciseShared) || ownerList.find(r => r.exercise);
+                const ex = exRec ? exRec.exercise : null;
+                exerciseType.value = ex ? (ex.type || '') : '';
+                exerciseDuration.value = ex && ex.duration ? ex.duration : '';
+                exerciseSteps.value = ex && ex.steps ? ex.steps : '';
+
+                const comments = [...new Set(ownerList.map(r => (r.comments || '').trim()).filter(Boolean))];
+                recordComments.value = comments.join(' / ');
+
+                const moodSet = [];
+                const dietSet = [];
+                ownerList.forEach(r => {
+                    (Array.isArray(r.moods) ? r.moods : []).forEach(m => {
+                        if (m && m !== 'normal' && !moodSet.includes(m)) moodSet.push(m);
+                    });
+                    (Array.isArray(r.dietContext) ? r.dietContext : []).forEach(c => {
+                        if (c && !dietSet.includes(c)) dietSet.push(c);
+                    });
+                });
+                renderMoodSelector(moodSet.length ? moodSet : ['normal']);
+                renderDietContextSelector(dietSet);
+                renderRecordMedicines();
+                ownerList.forEach(r => applyMedicationComplianceToForm(r));
+
+                // Aviso: datos guardados que la tabla no puede mostrar (duplicados / formato antiguo).
+                let hidden = set.others.length;
+                ownerList.forEach(r => {
+                    if (r.meal === 'nighttime') {
+                        if (numericValue(r.glucoseBefore) !== null || numericValue(r.glucoseAfter) !== null) hidden++;
+                    } else if (MEAL_ORDER.includes(r.meal)) {
+                        if (numericValue(r.glucoseNight) !== null) hidden++;
+                    }
+                });
+                const notice = document.getElementById('slotsDayNotice');
+                if (notice) {
+                    if (hidden > 0) {
+                        notice.style.display = '';
+                        notice.textContent = 'Esta fecha tiene ' + hidden + ' registro(s) o lectura(s) guardados con el formato anterior ' +
+                            '(duplicados u otro momento) que no caben en la tabla. Se conservan sin cambios y se ven en el historial, ' +
+                            'donde puedes eliminarlos.';
+                    } else {
+                        notice.style.display = 'none';
+                        notice.textContent = '';
+                    }
+                }
+
+                const hasRecords = ownerList.length > 0;
+                saveRecordBtn.textContent = hasRecords ? 'Actualizar medicion' : 'Guardar medicion';
+                saveRecordBtn.style.background = hasRecords ? '#d48c2c' : '';
+                updateTodayRecordButton();
+            }
+
+            function syncRecordFormIfPatientChanged() {
+                try {
+                    if (formPatientId !== state.currentPatientId) {
+                        loadDayIntoForm(recordDate.value || todayStr());
+                    }
+                } catch (e) { /* formulario aun no inicializado */ }
             }
 
             function editRecord(id) {
                 const r = state.records.find(rec => rec.id === id);
                 if (!r) { toast('Registro no encontrado', 'error'); return; }
-                state.editingId = id;
-                recordDate.value = r.date || todayStr();
-                recordMeal.value = r.meal || 'breakfast';
-                glucoseBefore.value = r.glucoseBefore !== null ? r.glucoseBefore : '';
-                glucoseAfter.value = r.glucoseAfter !== null ? r.glucoseAfter : '';
-                glucoseNight.value = r.glucoseNight !== null ? r.glucoseNight : '';
-                updateNightGlucoseVisibility();
-                if (r.exercise) {
-                    exerciseType.value = r.exercise.type || '';
-                    exerciseDuration.value = r.exercise.duration || '';
-                    exerciseSteps.value = r.exercise.steps || '';
-                } else {
-                    exerciseType.value = '';
-                    exerciseDuration.value = '';
-                    exerciseSteps.value = '';
-                }
-                recordComments.value = r.comments || '';
-                renderMoodSelector(r.moods || ['normal']);
-                renderDietContextSelector(r.dietContext || []);
-                // Restaurar en el formulario el cumplimiento de medicacion que se
-                // guardo con este registro (si lo hay), en vez de dejar las
-                // casillas siempre vacias como si nunca se hubiera registrado nada.
-                renderRecordMedicines();
-                applyMedicationComplianceToForm(r);
-                saveRecordBtn.textContent = 'Actualizar medicion';
-                saveRecordBtn.style.background = '#d48c2c';
-                toast('Editando registro -- modifica y guarda', 'info');
-
-                // Desplazarse al inicio de la seccion "Registrar medicion",
-                // no al principio de la pagina.
+                if (slotsDirty && (r.date || todayStr()) !== loadedFormDate &&
+                    !confirm('Hay cambios sin guardar en la tabla de lecturas. Si continuas se perderan. Continuar?')) return;
+                loadDayIntoForm(r.date || todayStr());
+                toast('Mostrando las lecturas del ' + formatDate(r.date) + ' -- modifica la tabla y guarda', 'info');
                 const recordFormSection = document.getElementById('recordFormSection');
                 if (recordFormSection) {
                     recordFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -10411,27 +10540,8 @@ function shiftSampleDatasetToToday(data) {
             }
 
             // ---------- RESET FORM ----------
-            function resetForm(dateOverride, mealOverride) {
-                state.editingId = null;
-                recordDate.value = dateOverride || todayStr();
-                recordMeal.value = mealOverride || 'breakfast';
-                glucoseBefore.value = '';
-                glucoseAfter.value = '';
-                glucoseNight.value = '';
-                updateNightGlucoseVisibility();
-                exerciseType.value = '';
-                exerciseDuration.value = '';
-                exerciseSteps.value = '';
-                recordComments.value = '';
-                renderMoodSelector(['normal']);
-                renderDietContextSelector([]);
-                // Reiniciar tambien las casillas de cumplimiento de medicacion:
-                // sin esto, una casilla marcada al guardar un registro seguia
-                // marcada para el siguiente, provocando que se registrara la misma
-                // toma dos veces por error.
-                renderRecordMedicines();
-                saveRecordBtn.textContent = 'Guardar medicion';
-                saveRecordBtn.style.background = '';
+            function resetForm(dateOverride) {
+                loadDayIntoForm(dateOverride || todayStr());
             }
 
             // ---------- VALIDATION ----------
@@ -10469,106 +10579,78 @@ function shiftSampleDatasetToToday(data) {
             }
 
             // ---------- SAVE RECORD ----------
-            async function handleSaveRecord() {
-                const date = recordDate.value || todayStr();
-                const meal = recordMeal.value;
-                const beforeVal = glucoseBefore.value.trim();
-                const afterVal = glucoseAfter.value.trim();
-                const nightVal = glucoseNight.value.trim();
-                const exType = exerciseType.value;
-                const exDur = exerciseDuration.value.trim();
-                const exSteps = exerciseSteps.value.trim();
-                const comments = recordComments.value.trim();
-                const moods = selectedMoods.length > 0 ? selectedMoods : ['normal'];
-                const dietContext = selectedDietContext.slice();
-
-                let weather = null;
-                try {
-                    weather = await fetchWeatherForDate(date);
-                    if (weather) {
-                        toast(`Datos meteorologicos reales obtenidos para ${formatDate(date)}`, 'info');
-                    } else {
-                        toast(`No se pudo obtener clima automatico para ${formatDate(date)}. El registro se guardara sin clima; puedes anadirlo con la entrada manual.`, 'warning');
-                    }
-                } catch (e) {
-                    console.warn('Error obteniendo clima:', e);
-                    toast('Error al obtener clima automatico. El registro se guardara sin datos climaticos; puedes anadirlos con la entrada manual.', 'warning');
-                }
-
-                const data = {
-                    date,
-                    meal,
-                    glucoseBefore: beforeVal !== '' ? numericValue(beforeVal) : null,
-                    glucoseAfter: afterVal !== '' ? numericValue(afterVal) : null,
-                    glucoseNight: nightVal !== '' ? numericValue(nightVal) : null,
-                    exercise: exType ? { type: exType, duration: exDur !== '' ? parseInt(exDur) : null, steps: exSteps !==
-                            '' ? parseInt(exSteps) : null } : null,
-                    comments,
-                    moods: moods,
-                    dietContext: dietContext,
-                    weather: weather,
+            function buildDayRecord(date, meal) {
+                return {
+                    id: generateId(),
+                    patientId: state.currentPatientId,
+                    profile: snapshotCurrentProfile(),
+                    date: date,
+                    meal: meal,
+                    glucoseBefore: null,
+                    glucoseAfter: null,
+                    glucoseNight: null,
+                    exercise: null,
+                    comments: '',
+                    moods: ['normal'],
+                    dietContext: [],
+                    weather: null,
+                    severity: null,
+                    medicationLogIds: [],
+                    createdAt: new Date().toISOString()
                 };
+            }
 
-                const errors = validateRecord(data, beforeVal, afterVal, nightVal);
+            function recordHasReading(r) {
+                return numericValue(r.glucoseBefore) !== null || numericValue(r.glucoseAfter) !== null ||
+                    numericValue(r.glucoseNight) !== null;
+            }
+
+            function recomputeSeverity(r) {
+                const sevOrder = ['emergency', 'urgent', 'moderate', 'mild'];
+                const sevs = [getSeverity(r.glucoseBefore), getSeverity(r.glucoseAfter), getSeverity(r.glucoseNight)]
+                    .filter(s => s !== null);
+                r.severity = sevs.length > 0 ? (sevOrder.find(s => sevs.includes(s)) || 'mild') : null;
+            }
+
+            // Guarda TODO el dia de golpe: una fila de la tabla = un valor. Las filas vacias no se
+            // guardan (y borran el valor si antes lo habia). Si no hay ninguna lectura, el dia se
+            // guarda igualmente (registro "Sin lecturas") con el resto de datos del bloque compartido.
+            async function handleSaveRecord() {
+                if (!getCurrentPatient()) {
+                    toast('Selecciona o crea un paciente antes de guardar.', 'error');
+                    return;
+                }
+                const date = recordDate.value || todayStr();
+                const values = {};
+                SLOT_DEFS.forEach(s => { values[s.key] = glucoseSlotInputs[s.key].value.trim(); });
+
+                const errors = [];
+                SLOT_DEFS.forEach(s => {
+                    const raw = values[s.key];
+                    if (raw === '') return;
+                    const n = numericValue(raw);
+                    if (n === null || n < 20 || n > 600) errors.push(s.label + ': debe estar entre 20 y 600 mg/dL');
+                });
+                ['breakfast', 'lunch', 'dinner'].forEach(m => {
+                    const bv = numericValue(values[m + '-before']);
+                    const av = numericValue(values[m + '-after']);
+                    if (bv !== null && av !== null && av < bv && av > 0 && bv > 0) {
+                        errors.push(mealLabel(m) + ': la glucosa despues es menor que antes. Revisa los valores?');
+                    }
+                });
                 if (errors.length > 0) {
                     errors.forEach(e => toast(e, 'error'));
-                    if (errors.some(e => e.includes('al menos una'))) return;
                     if (!confirm(errors.join('\n') + '\n\nDeseas guardar de todas formas?')) return;
                 }
 
-                // Combine complementary readings for a patient/date/meal, but
-                // never replace a value that was already recorded in that slot.
-                let existingForSlot = null;
-                if (!state.editingId) {
-                    const readingFields = ['glucoseBefore', 'glucoseAfter', 'glucoseNight'];
-                    existingForSlot = state.records.slice().reverse().find(record =>
-                        record.patientId === state.currentPatientId &&
-                        record.date === date &&
-                        record.meal === meal &&
-                        !readingFields.some(field =>
-                            data[field] !== null && record[field] !== null && record[field] !== undefined)
-                    ) || null;
-
-                    if (existingForSlot) {
-                        readingFields.forEach(field => {
-                            if (data[field] === null && existingForSlot[field] !== null &&
-                                existingForSlot[field] !== undefined) {
-                                data[field] = existingForSlot[field];
-                            }
-                        });
-                        data.exercise = data.exercise || existingForSlot.exercise;
-                        data.comments = data.comments || existingForSlot.comments || '';
-                        if (data.moods.length === 1 && data.moods[0] === 'normal' &&
-                            Array.isArray(existingForSlot.moods)) {
-                            data.moods = existingForSlot.moods;
-                        }
-                        if (data.dietContext.length === 0 && Array.isArray(existingForSlot.dietContext)) {
-                            data.dietContext = existingForSlot.dietContext;
-                        }
-                        data.weather = data.weather || existingForSlot.weather;
-                        data.profile = existingForSlot.profile;
-                        state.editingId = existingForSlot.id;
-                        applyMedicationComplianceToForm(existingForSlot);
-                    }
-                }
-
-                const sevBefore = getSeverity(data.glucoseBefore);
-                const sevAfter = getSeverity(data.glucoseAfter);
-                const sevNight = getSeverity(data.glucoseNight);
-                const sevOrder = ['emergency', 'urgent', 'moderate', 'mild'];
-                const sevs = [sevBefore, sevAfter, sevNight].filter(s => s !== null);
-                if (sevs.length > 0) {
-                    data.severity = sevOrder.find(s => sevs.includes(s)) || 'mild';
-                }
-
-                // Sin informacion de medicacion en un registro nuevo: se pregunta
-                // explicitamente en vez de guardar con el cumplimiento en blanco.
-                // Se comprueba en CADA registro nuevo (no solo el primero del dia),
-                // porque la medicacion puede tomarse varias veces al dia y cada
-                // registro es una ocasion distinta para confirmarla. Solo aplica a
-                // registros NUEVOS (no al editar uno ya existente) y solo si el
-                // paciente tiene medicamentos configurados.
-                if (!state.editingId && currentPatientHasMedicines() && recordMedicineChecklistIsEmpty()) {
+                // Medicacion: si el dia aun no tiene ninguna toma registrada y no se ha marcado nada,
+                // se pregunta explicitamente (igual que antes), ANTES de modificar ningun dato.
+                const set = getDayRecordSet(date);
+                const ownersBefore = getOwnerList(set);
+                const previousLogIds = new Set();
+                ownersBefore.forEach(r => (Array.isArray(r.medicationLogIds) ? r.medicationLogIds : [])
+                    .forEach(id => previousLogIds.add(id)));
+                if (currentPatientHasMedicines() && recordMedicineChecklistIsEmpty() && previousLogIds.size === 0) {
                     const choice = await promptMedicationConfirmation();
                     if (choice === 'specify') {
                         if (recordMedicineList) {
@@ -10582,38 +10664,120 @@ function shiftSampleDatasetToToday(data) {
                     if (choice === 'yes') {
                         markAllMedicinesTaken();
                     }
-                    // 'skip': se continua guardando sin especificar cumplimiento.
                 }
 
-                if (state.editingId) {
-                    updateRecord(state.editingId, data);
-                    resetForm();
+                let weather = null;
+                try {
+                    weather = await fetchWeatherForDate(date);
+                    if (weather) {
+                        toast('Datos meteorologicos reales obtenidos para ' + formatDate(date), 'info');
+                    } else {
+                        toast('No se pudo obtener clima automatico para ' + formatDate(date) + '. El registro se guardara sin clima; puedes anadirlo con la entrada manual.', 'warning');
+                    }
+                } catch (e) {
+                    console.warn('Error obteniendo clima:', e);
+                    toast('Error al obtener clima automatico. El registro se guardara sin datos climaticos; puedes anadirlos con la entrada manual.', 'warning');
+                }
+
+                const exType = exerciseType.value;
+                const exDur = exerciseDuration.value.trim();
+                const exSteps = exerciseSteps.value.trim();
+                const exercise = exType ? {
+                    type: exType,
+                    duration: exDur !== '' ? parseInt(exDur) : null,
+                    steps: exSteps !== '' ? parseInt(exSteps) : null
+                } : null;
+                const comments = recordComments.value.trim();
+                const moods = selectedMoods.length > 0 ? selectedMoods.slice() : ['normal'];
+                const dietContext = selectedDietContext.slice();
+
+                const numOrNull = v => (v !== '' ? numericValue(v) : null);
+                const desired = {
+                    breakfast: { glucoseBefore: numOrNull(values['breakfast-before']), glucoseAfter: numOrNull(values['breakfast-after']) },
+                    lunch: { glucoseBefore: numOrNull(values['lunch-before']), glucoseAfter: numOrNull(values['lunch-after']) },
+                    dinner: { glucoseBefore: numOrNull(values['dinner-before']), glucoseAfter: numOrNull(values['dinner-after']) },
+                    nighttime: { glucoseNight: numOrNull(values['night']) }
+                };
+
+                const toRemove = new Set();
+                const dayRecs = [];
+                MEAL_ORDER.forEach(meal => {
+                    const want = desired[meal];
+                    const wantsAny = Object.keys(want).some(f => want[f] !== null);
+                    let rec = set.owners[meal] || null;
+                    if (!rec && !wantsAny) return;
+                    if (!rec) { rec = buildDayRecord(date, meal); state.records.push(rec); }
+                    Object.keys(want).forEach(f => { rec[f] = want[f]; });
+                    if (recordHasReading(rec)) dayRecs.push(rec); else toRemove.add(rec.id);
+                });
+
+                let nodataRec = set.owners[NODATA_MEAL] || null;
+                let primary = dayRecs[0] || null;
+                if (dayRecs.length > 0) {
+                    if (nodataRec) toRemove.add(nodataRec.id);
                 } else {
-                    addRecord(data);
-                    resetForm();
+                    if (!nodataRec) { nodataRec = buildDayRecord(date, NODATA_MEAL); state.records.push(nodataRec); }
+                    primary = nodataRec;
+                }
+                const dayTargets = dayRecs.length > 0 ? dayRecs : [primary];
+
+                // Medicacion: se sustituyen las tomas que habian creado los registros de este dia
+                // por las del bloque compartido, que se asocian al registro principal.
+                ownersBefore.forEach(r => { r.medicationLogIds = []; });
+                const patient = getCurrentPatient();
+                if (patient) {
+                    if (previousLogIds.size > 0) {
+                        patient.medicationLog = (patient.medicationLog || []).filter(e => !previousLogIds.has(e.id));
+                    }
+                    const newLogs = collectRecordMedicationLogs(date);
+                    if (newLogs.length) {
+                        patient.medicationLog = patient.medicationLog || [];
+                        patient.medicationLog.unshift(...newLogs);
+                    }
+                    primary.medicationLogIds = newLogs.map(l => l.id);
                 }
 
-                // Aviso informativo (no clinico): si hay una lectura urgente/emergencia
-                // y a la vez alguna circunstancia que puede actuar como factor de
-                // confusion (dieta atipica, malestar/estres/sueño, dosis omitida,
-                // medicacion nueva o temperatura extrema), se lo hacemos notar al
-                // usuario. Se comprueba DESPUES de guardar para que la deteccion
-                // automatica (dosis omitida, medicacion reciente) use los datos ya
-                // persistidos. Esto NO modifica la severidad calculada arriba, solo
-                // añade contexto para interpretarla.
-                if (data.severity === 'urgent' || data.severity === 'emergency') {
+                // Bloque compartido: animo, contexto de comida, clima y ejercicio se copian a todos
+                // los registros del dia (cada lectura se analiza con sus circunstancias); el
+                // comentario y la medicacion solo van en el registro principal. Las copias de
+                // ejercicio se marcan para no sumar dos veces los minutos/pasos del dia.
+                dayTargets.forEach(rec => {
+                    const isPrimary = rec === primary;
+                    rec.moods = moods.slice();
+                    rec.dietContext = dietContext.slice();
+                    if (weather) rec.weather = weather;
+                    rec.exercise = exercise ? Object.assign({}, exercise) : null;
+                    if (exercise && !isPrimary) rec.exerciseShared = true; else delete rec.exerciseShared;
+                    rec.comments = isPrimary ? comments : '';
+                    if (!rec.profile) rec.profile = snapshotCurrentProfile();
+                    recomputeSeverity(rec);
+                });
+
+                state.records = state.records.filter(r => !toRemove.has(r.id));
+                saveState();
+                renderRecords();
+                renderMedicineLog();
+
+                const nReadings = dayRecs.reduce((n, r) =>
+                    n + [r.glucoseBefore, r.glucoseAfter, r.glucoseNight].filter(v => numericValue(v) !== null).length, 0);
+                toast(nReadings > 0
+                    ? 'Dia ' + formatDate(date) + ' guardado (' + nReadings + (nReadings === 1 ? ' lectura)' : ' lecturas)')
+                    : 'Dia ' + formatDate(date) + ' guardado sin lecturas', 'success');
+
+                // Aviso informativo (no clinico): lectura urgente/emergencia con posible factor de confusion.
+                const worst = dayTargets.some(r => r.severity === 'emergency') ? 'emergency'
+                    : (dayTargets.some(r => r.severity === 'urgent') ? 'urgent' : null);
+                if (worst) {
                     const confoundEntries = getRecordConfoundEntries({ date, moods, dietContext, weather });
                     if (confoundEntries.length > 0) {
                         const confoundLabels = confoundEntries.map(e => e.detailLabel).join(', ');
-                        toast(`Lectura ${getSeverityLabel(data.severity).toLowerCase()} con posible(s) factor(es) de confusion registrado(s) (${confoundLabels}). Tenlo en cuenta al interpretarla.`,
-                            'warning');
+                        toast('Lectura ' + getSeverityLabel(worst).toLowerCase() + ' con posible(s) factor(es) de confusion registrado(s) (' + confoundLabels + '). Tenlo en cuenta al interpretarla.', 'warning');
                     }
                 }
 
-                if (weather) {
-                    updateWeatherDisplay(date);
-                }
+                if (weather) updateWeatherDisplay(date);
                 updateWeatherDisplayCount();
+                loadDayIntoForm(date);
             }
 
             // ---------- PATIENT FORMS ----------
@@ -15565,7 +15729,7 @@ function shiftSampleDatasetToToday(data) {
                         const night = formattedGlucose(record.glucoseNight, 'night', profile);
                         if (night !== null) row.nighttime.push(night);
 
-                        if (record.exercise) {
+                        if (record.exercise && !record.exerciseShared) {
                             const duration = numericValue(record.exercise.duration);
                             const steps = numericValue(record.exercise.steps);
                             if (duration !== null) {
@@ -15858,8 +16022,18 @@ function shiftSampleDatasetToToday(data) {
             if (customTargetEnabled) customTargetEnabled.addEventListener('change', updateCustomTargetVisibility);
             saveRecordBtn.addEventListener('click', handleSaveRecord);
             if (editTodayRecordBtn) editTodayRecordBtn.addEventListener('click', editTodayRecord);
-            recordMeal.addEventListener('change', updateNightGlucoseVisibility);
-            recordMeal.addEventListener('change', updateAutoMedTimesForMeal);
+            recordDate.addEventListener('change', () => {
+                const newDate = recordDate.value || todayStr();
+                if (slotsDirty && loadedFormDate && newDate !== loadedFormDate &&
+                    !confirm('Hay cambios sin guardar en la tabla de lecturas. Si cambias de fecha se perderan. Continuar?')) {
+                    recordDate.value = loadedFormDate;
+                    return;
+                }
+                loadDayIntoForm(newDate);
+            });
+            [exerciseType, exerciseDuration, exerciseSteps, recordComments].forEach(el => {
+                if (el) el.addEventListener('input', () => { slotsDirty = true; });
+            });
             if (recordsToggleBtn) recordsToggleBtn.addEventListener('click', () => {
                 showAllRecords = !showAllRecords;
                 renderRecords();
@@ -15879,9 +16053,15 @@ function shiftSampleDatasetToToday(data) {
                 showLastWeather();
             });
 
-            [glucoseBefore, glucoseAfter, glucoseNight].forEach(field => {
+            SLOT_DEFS.forEach((s, i) => {
+                const field = glucoseSlotInputs[s.key];
+                if (!field) return;
+                field.addEventListener('input', () => { slotsDirty = true; });
                 field.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') handleSaveRecord();
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const nextDef = SLOT_DEFS[i + 1];
+                    if (nextDef) glucoseSlotInputs[nextDef.key].focus(); else handleSaveRecord();
                 });
             });
 
@@ -16111,6 +16291,7 @@ function shiftSampleDatasetToToday(data) {
                     const date = btn.getAttribute('data-missing-date');
                     closeMissingDaysModal();
                     recordDate.value = date;
+                    loadDayIntoForm(date);
                     const recordSection = document.getElementById('recordDate');
                     if (recordSection) recordSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     toast(`Fecha ${formatDate(date)} preseleccionada. Completa y guarda la medicion.`, 'info');
